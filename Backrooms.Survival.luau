@@ -6,7 +6,6 @@ local UserInputService = game:GetService("UserInputService")
 
 local LocalPlayer = Players.LocalPlayer
 
--- State
 local ESPEnabled = false
 local UIMinimized = false
 
@@ -26,9 +25,9 @@ local function updateESP(player: Player)
             hl.Parent = char
         end
         hl.FillTransparency = 0.5
-        hl.FillColor = Color3.fromRGB(128, 0, 255)      -- Purple
+        hl.FillColor = Color3.fromRGB(128, 0, 255)
         hl.OutlineTransparency = 0
-        hl.OutlineColor = Color3.new(1, 1, 1)           -- White outline
+        hl.OutlineColor = Color3.new(1, 1, 1)
         hl.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
         hl.DistanceMode = Enum.HighlightDistanceMode.AlwaysOnTop
         hl.Enabled = true
@@ -90,12 +89,11 @@ local function createUI()
     UICorner.CornerRadius = UDim.new(0, 8)
     UICorner.Parent = MainFrame
 
-    -- Title Bar (height 50)
+    -- Title Bar
     local TitleBar = Instance.new("Frame")
     TitleBar.Size = UDim2.new(1, 0, 0, 50)
     TitleBar.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
     TitleBar.Parent = MainFrame
-
     local TitleBarCorner = Instance.new("UICorner")
     TitleBarCorner.CornerRadius = UDim.new(0, 8)
     TitleBarCorner.Parent = TitleBar
@@ -158,6 +156,7 @@ local function createUI()
         local tween = TweenService:Create(MainFrame, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Size = goalSize })
         tween:Play()
         ToggleUIButton.Text = UIMinimized and "+" or "-"
+        -- Hide panels completely and reset their sizes to avoid layout glitches
         LeftPanel.Visible = not UIMinimized
         RightPanel.Visible = not UIMinimized
         if UIMinimized then
@@ -169,14 +168,20 @@ local function createUI()
         end
     end)
 
-    -- Drag functionality (mouse + touch compatible)
+    -- Drag with area restriction (only from TitleBar)
     local dragging = false
     local dragOffset = Vector2.new()
 
     local function startDrag(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-            dragging = true
-            dragOffset = input.Position - MainFrame.AbsolutePosition
+            local pos = input.Position
+            local tbPos = TitleBar.AbsolutePosition
+            local tbSize = TitleBar.AbsoluteSize
+            if pos.X >= tbPos.X and pos.X <= tbPos.X + tbSize.X and
+               pos.Y >= tbPos.Y and pos.Y <= tbPos.Y + tbSize.Y then
+                dragging = true
+                dragOffset = pos - MainFrame.AbsolutePosition
+            end
         end
     end
 
@@ -247,7 +252,7 @@ local function createUI()
     ListLayout.Padding = UDim.new(0, 5)
     ListLayout.Parent = ListContainer
 
-    -- Helper: create a toggle row
+    -- Helper: create toggle row
     local function createFeatureRow(labelText, initialState, onToggle)
         local row = Instance.new("Frame")
         row.Size = UDim2.new(1, 0, 0, 30)
