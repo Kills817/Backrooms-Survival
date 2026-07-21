@@ -62,6 +62,7 @@ local function createTag(target)
     billboard.Size = UDim2.new(0, 200, 0, 40)
     billboard.StudsOffset = Vector3.new(0, 3.5, 0)
     billboard.AlwaysOnTop = true
+    billboard.Adornee = target  -- 关键：附着到模型
     billboard.Parent = tag
 
     local label = Instance.new("TextLabel")
@@ -200,15 +201,15 @@ local function createUI()
     Title.Size = UDim2.new(1, -70, 0, 20)
     Title.Position = UDim2.new(0, 10, 0, 5)
     Title.BackgroundTransparency = 1
-    Title.Text = "Backrooms Survival Explorer Script"
+    Title.Text = "Explorer Script"
     Title.TextColor3 = Color3.new(1, 1, 1)
     Title.Font = Enum.Font.SourceSansBold
-    Title.TextSize = 18
+    Title.TextSize = 20
     Title.TextXAlignment = Enum.TextXAlignment.Left
     Title.TextYAlignment = Enum.TextYAlignment.Top
     Title.Parent = TitleBar
 
-    -- Subtitle (changed)
+    -- Subtitle
     local SubTitle = Instance.new("TextLabel")
     SubTitle.Size = UDim2.new(1, -70, 0, 15)
     SubTitle.Position = UDim2.new(0, 10, 0, 28)
@@ -302,7 +303,6 @@ local function createUI()
         layout.VerticalAlignment = Enum.VerticalAlignment.Top
         layout.Padding = UDim.new(0, 5)
         layout.Parent = container
-        -- Update canvas size when layout changes
         layout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
             sc.CanvasSize = UDim2.new(0, 0, 0, layout.AbsoluteContentSize.Y + 10)
         end)
@@ -312,11 +312,9 @@ local function createUI()
     local SettingsScroller, SettingsContainer, SettingsLayout = createScrollingFrame("SettingsScroller")
     local ESPScroller, ESPContainer, ESPLayout = createScrollingFrame("ESPScroller")
 
-    -- Initially hide both
     SettingsScroller.Visible = false
     ESPScroller.Visible = false
 
-    -- Category buttons with selection highlight
     local selectedButton = nil
     local function createCategoryButton(text, targetScroller, yPos)
         local btn = Instance.new("TextButton")
@@ -329,15 +327,11 @@ local function createUI()
         btn.TextSize = 18
         btn.Parent = LeftPanel
         btn.MouseButton1Click:Connect(function()
-            -- Deselect previous
             if selectedButton then
                 selectedButton.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
             end
-            -- Select current
-            btn.BackgroundColor3 = Color3.fromRGB(35, 35, 35) -- same as LeftPanel background
+            btn.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
             selectedButton = btn
-            
-            -- Show only the selected scroller
             SettingsScroller.Visible = (targetScroller == SettingsScroller)
             ESPScroller.Visible = (targetScroller == ESPScroller)
         end)
