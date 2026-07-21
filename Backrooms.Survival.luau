@@ -70,8 +70,13 @@ RunService.RenderStepped:Connect(function()
     end
 end)
 
--- UI Creation (Refactored)
+-- UI Creation
 local function createUI()
+    -- Prevent duplicate UI
+    if LocalPlayer.PlayerGui:FindFirstChild("BackroomsSurvivalUI") then
+        return
+    end
+
     local ScreenGui = Instance.new("ScreenGui")
     ScreenGui.Name = "BackroomsSurvivalUI"
     ScreenGui.ResetOnSpawn = false
@@ -114,12 +119,12 @@ local function createUI()
     Title.TextYAlignment = Enum.TextYAlignment.Top
     Title.Parent = TitleBar
 
-    -- Subtitle (fixed grammar: "made" instead of "make")
+    -- Subtitle
     local SubTitle = Instance.new("TextLabel")
     SubTitle.Size = UDim2.new(1, -70, 0, 15)
     SubTitle.Position = UDim2.new(0, 10, 0, 28)
     SubTitle.BackgroundTransparency = 1
-    SubTitle.Text = "Testing, made by F-197"   -- ← corrected
+    SubTitle.Text = "Testing, made by F-197"
     SubTitle.TextColor3 = Color3.fromRGB(210, 210, 210)
     SubTitle.Font = Enum.Font.SourceSans
     SubTitle.TextSize = 12
@@ -137,7 +142,7 @@ local function createUI()
     CloseButton.Font = Enum.Font.SourceSansBold
     CloseButton.TextSize = 18
     CloseButton.Parent = TitleBar
-    CloseButton.MouseButton1Click:Connect(function()
+    CloseButton.Activated:Connect(function()
         ESPEnabled = false
         rescanAll()
         ScreenGui:Destroy()
@@ -154,7 +159,7 @@ local function createUI()
     ToggleUIButton.TextSize = 22
     ToggleUIButton.Parent = TitleBar
 
-    -- Content Container (holds left panel & right panel)
+    -- Content Container
     local ContentContainer = Instance.new("Frame")
     ContentContainer.Name = "ContentContainer"
     ContentContainer.Size = UDim2.new(1, 0, 1, -50)
@@ -163,14 +168,14 @@ local function createUI()
     ContentContainer.ClipsDescendants = true
     ContentContainer.Parent = MainFrame
 
-    -- Left Panel (categories)
+    -- Left Panel
     local LeftPanel = Instance.new("Frame")
     LeftPanel.Size = UDim2.new(0, 120, 1, 0)
     LeftPanel.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
     LeftPanel.BorderSizePixel = 0
     LeftPanel.Parent = ContentContainer
 
-    -- Right Panel (content)
+    -- Right Panel
     local RightPanel = Instance.new("Frame")
     RightPanel.Size = UDim2.new(1, -120, 1, 0)
     RightPanel.Position = UDim2.new(0, 120, 0, 0)
@@ -178,7 +183,7 @@ local function createUI()
     RightPanel.BorderSizePixel = 0
     RightPanel.Parent = ContentContainer
 
-    -- Category Buttons (Left)
+    -- Category Buttons
     local ESPButton = Instance.new("TextButton")
     ESPButton.Size = UDim2.new(1, 0, 0, 35)
     ESPButton.Position = UDim2.new(0, 0, 0, 0)
@@ -188,11 +193,11 @@ local function createUI()
     ESPButton.Font = Enum.Font.SourceSans
     ESPButton.TextSize = 18
     ESPButton.Parent = LeftPanel
-    ESPButton.MouseButton1Click:Connect(function()
+    ESPButton.Activated:Connect(function()
         ESPFrame.Visible = true
     end)
 
-    -- Right Panel Content (ESP Frame)
+    -- ESP Frame (content area)
     local ESPFrame = Instance.new("Frame")
     ESPFrame.Size = UDim2.new(1, 0, 1, 0)
     ESPFrame.BackgroundTransparency = 1
@@ -274,7 +279,7 @@ local function createUI()
 
         updateVisual(initialState)
 
-        toggleBtn.MouseButton1Click:Connect(function()
+        toggleBtn.Activated:Connect(function()
             currentState = not currentState
             onToggle(currentState)
             updateVisual(currentState)
@@ -289,8 +294,8 @@ local function createUI()
         rescanAll()
     end)
 
-    -- Minimize/Expand logic
-    ToggleUIButton.MouseButton1Click:Connect(function()
+    -- Minimize/Expand
+    ToggleUIButton.Activated:Connect(function()
         UIMinimized = not UIMinimized
         local goalSize = UIMinimized and UDim2.new(0, 400, 0, 50) or UDim2.new(0, 400, 0, 250)
         local tween = TweenService:Create(MainFrame, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Size = goalSize })
@@ -306,39 +311,29 @@ local function createUI()
         end
     end)
 
-    -- Drag (only when clicking on TitleBar)
+    -- Drag (TitleBar only, both mouse & touch)
     local dragging = false
     local dragOffset = Vector2.new()
 
-    local function startDrag(input)
+    TitleBar.InputBegan:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-            local pos = input.Position
-            local tbPos = TitleBar.AbsolutePosition
-            local tbSize = TitleBar.AbsoluteSize
-            if pos.X >= tbPos.X and pos.X <= tbPos.X + tbSize.X and
-               pos.Y >= tbPos.Y and pos.Y <= tbPos.Y + tbSize.Y then
-                dragging = true
-                dragOffset = pos - MainFrame.AbsolutePosition
-            end
+            dragging = true
+            dragOffset = input.Position - MainFrame.AbsolutePosition
         end
-    end
+    end)
 
-    local function updateDrag(input)
+    TitleBar.InputChanged:Connect(function(input)
         if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
             local newPos = input.Position - dragOffset
             MainFrame.Position = UDim2.new(0, newPos.X, 0, newPos.Y)
         end
-    end
+    end)
 
-    local function endDrag(input)
+    TitleBar.InputEnded:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
             dragging = false
         end
-    end
-
-    UserInputService.InputBegan:Connect(startDrag)
-    UserInputService.InputChanged:Connect(updateDrag)
-    UserInputService.InputEnded:Connect(endDrag)
+    end)
 
     return ScreenGui, MainFrame
 end
