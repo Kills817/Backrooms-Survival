@@ -2,70 +2,124 @@ local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
+local Workspace = game:GetService("Workspace")
 
 local LocalPlayer = Players.LocalPlayer
 
-local ESPEnabled = false
+local PlayerESPEnabled = false
+local NPCESPEnabled = false
 local UIMinimized = false
 
-local function updateESP(player)
-    if player == LocalPlayer then return end
-    if not player.Character then return end
+local function createTag(target)
+    if target:FindFirstChild("ESPTag") then return end
+    local tag = Instance.new("Folder")
+    tag.Name = "ESPTag"
+    tag.Parent = target
 
-    local char = player.Character
-    local hl = char:FindFirstChild("BackroomsESP")
+    local highlight = Instance.new("Highlight")
+    highlight.Name = "Highlight"
+    highlight.FillTransparency = 0.5
+    highlight.FillColor = Color3.fromRGB(128, 0, 255)
+    highlight.OutlineTransparency = 0
+    highlight.OutlineColor = Color3.new(1, 1, 1)
+    highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+    highlight.Parent = tag
 
-    if ESPEnabled then
-        if not hl then
-            hl = Instance.new("Highlight")
-            hl.Name = "BackroomsESP"
-            hl.Adornee = char
-            hl.Parent = char
-        end
-        hl.FillTransparency = 0.5
-        hl.FillColor = Color3.fromRGB(128, 0, 255)
-        hl.OutlineTransparency = 0
-        hl.OutlineColor = Color3.new(1, 1, 1)
-        hl.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
-        hl.Enabled = true
-    else
-        if hl then
-            hl:Destroy()
-        end
+    local billboard = Instance.new("BillboardGui")
+    billboard.Name = "Billboard"
+    billboard.Size = UDim2.new(0, 150, 0, 30)
+    billboard.StudsOffset = Vector3.new(0, 2.5, 0)
+    billboard.AlwaysOnTop = true
+    billboard.Parent = tag
+
+    local label = Instance.new("TextLabel")
+    label.Name = "Label"
+    label.Size = UDim2.new(1, 0, 1, 0)
+    label.BackgroundTransparency = 1
+    label.TextColor3 = Color3.new(1, 1, 1)
+    label.Font = Enum.Font.SourceSansBold
+    label.TextSize = 14
+    label.TextStrokeColor = Color3.new(0, 0, 0)
+    label.TextStrokeTransparency = 0.5
+    label.TextWrapped = true
+    label.TextXAlignment = Enum.TextXAlignment.Center
+    label.TextYAlignment = Enum.TextYAlignment.Center
+    label.Parent = billboard
+end
+
+local function updateTag(target)
+    local tag = target:FindFirstChild("ESPTag")
+    if not tag then return end
+    local label = tag:FindFirstChild("Billboard") and tag.Billboard:FindFirstChild("Label")
+    if not label then return end
+    local distance = (target.PrimaryPart and target.PrimaryPart.Position - LocalPlayer.Character and LocalPlayer.Character.PrimaryPart.Position).magnitude
+    if not distance then distance = 0 end
+    local name = (target:IsA("Model") and target.Name) or "Unknown"
+    if Players:GetPlayerFromCharacter(target) then
+        name = Players:GetPlayerFromCharacter(target).Name
     end
+    label.Text = name .. " | " .. string.format("%.1f", distance) .. " studs"
 end
 
-local function rescanAll()
-    for _, player in pairs(Players:GetPlayers()) do
-        updateESP(player)
-    end
+local function removeTag(target)
+    local tag = target:FindFirstChild("ESPTag")
+    if tag then tag:Destroy() end
 end
 
-for _, player in pairs(Players:GetPlayers()) do
-    player.CharacterAdded:Connect(function()
-        wait(0.5)
-        updateESP(player)
-    end)
+local function isNPC(target)
+    return target:IsA("Model") and target:FindFirstChild("Humanoid") and not Players:GetPlayerFromCharacter(target)
 end
 
-Players.PlayerAdded:Connect(function(player)
-    player.CharacterAdded:Connect(function()
-        wait(0.5)
-        updateESP(player)
-    end)
-end)
+local function isPlayerChar(target)
+    return target:IsA("Model") and target:FindFirstChild("Humanoid") and Players:GetPlayerFromCharacter(target)
+end
 
-RunService.RenderStepped:Connect(function()
-    if ESPEnabled then
-        for _, player in pairs(Players:GetPlayers()) do
-            if player ~= LocalPlayer and player.Character then
-                local hl = player.Character:FindFirstChild("BackroomsESP")
-                if hl then
-                    hl.Enabled = true
+local function refreshTargets()
+    for _, target in pairs(Workspace:GetDescendants()) do
+        if target:IsA("Model") and target:FindFirstChild("Humanoid") then
+            local isPlayer = Players:GetPlayerFromCharacter(target)
+            if isPlayer then
+                if PlayerESPEnabled and target ~= LocalPlayer.Character then
+                    createTag(target)
+                    updateTag(target)
+                else
+                    removeTag(target)
+                end
+            elseif isNPC(target) then
+                if NPCESPEnabled then
+                    createTag(target)
+                    updateTag(target)
+                else
+                    removeTag(target)
                 end
             end
         end
     end
+end
+
+local function onCharacterAdded(player)
+    player.CharacterAdded:Connect(function(char)
+        wait(0.5)
+        refreshTargets()
+    end)
+end
+
+for _, player in pairs(Players:GetPlayers()) do
+    onCharacterAdded(player)
+end
+
+Players.PlayerAdded:Connect(onCharacterAdded)
+
+RunService.RenderStepped:Connect(function()
+    if not PlayerESPEnabled and not NPCESPEnabled then
+        for _, target in pairs(Workspace:GetDescendants()) do
+            if target:IsA("Model") and target:FindFirstChild("Humanoid") then
+                removeTag(target)
+            end
+        end
+        return
+    end
+    refreshTargets()
 end)
 
 local function createUI()
@@ -136,8 +190,9 @@ local function createUI()
     CloseButton.TextSize = 18
     CloseButton.Parent = TitleBar
     CloseButton.MouseButton1Click:Connect(function()
-        ESPEnabled = false
-        rescanAll()
+        PlayerESPEnabled = false
+        NPCESPEnabled = false
+        refreshTargets()
         ScreenGui:Destroy()
     end)
 
@@ -176,7 +231,7 @@ local function createUI()
     ESPCatButton.Size = UDim2.new(1, 0, 0, 35)
     ESPCatButton.Position = UDim2.new(0, 0, 0, 0)
     ESPCatButton.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
-    ESPCatButton.Text = "ESP"
+    ESPCatButton.Text = "👁️ESP👁️"
     ESPCatButton.TextColor3 = Color3.new(1, 1, 1)
     ESPCatButton.Font = Enum.Font.SourceSans
     ESPCatButton.TextSize = 18
@@ -272,9 +327,14 @@ local function createUI()
         return row
     end
 
-    createRow("Player ESP", ESPEnabled, function(value)
-        ESPEnabled = value
-        rescanAll()
+    createRow("Player ESP", PlayerESPEnabled, function(value)
+        PlayerESPEnabled = value
+        refreshTargets()
+    end)
+
+    createRow("NPCs ESP", NPCESPEnabled, function(value)
+        NPCESPEnabled = value
+        refreshTargets()
     end)
 
     MinButton.MouseButton1Click:Connect(function()
