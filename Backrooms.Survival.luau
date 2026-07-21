@@ -12,20 +12,40 @@ local NPCESPEnabled = false
 local FullbrightEnabled = false
 local UIMinimized = false
 
-local originalBrightness = Lighting.Brightness
-local originalAmbient = Lighting.Ambient
-local originalOutdoorAmbient = Lighting.OutdoorAmbient
-
 local function applyFullbright(enable)
     if enable then
         Lighting.Brightness = 2
         Lighting.Ambient = Color3.new(1, 1, 1)
         Lighting.OutdoorAmbient = Color3.new(1, 1, 1)
+        Lighting.FogEnd = 100000
+        Lighting.GlobalShadows = false
     else
-        Lighting.Brightness = originalBrightness
-        Lighting.Ambient = originalAmbient
-        Lighting.OutdoorAmbient = originalOutdoorAmbient
+        Lighting.Brightness = 1
+        Lighting.Ambient = Color3.new(0, 0, 0)
+        Lighting.OutdoorAmbient = Color3.new(0, 0, 0)
+        Lighting.FogEnd = 100000
+        Lighting.GlobalShadows = true
     end
+end
+
+Lighting.LightingChanged:Connect(function()
+    if FullbrightEnabled then
+        applyFullbright(true)
+    end
+end)
+
+local function isNPCModel(model)
+    if not model or not model:IsA("Model") then return false end
+    if Players:GetPlayerFromCharacter(model) then return false end
+    if model:FindFirstChildOfClass("Humanoid") == nil then return false end
+    local parent = model.Parent
+    while parent do
+        if parent == Workspace then
+            return parent:FindFirstChild("NPCs") ~= nil
+        end
+        parent = parent.Parent
+    end
+    return false
 end
 
 local function createTag(target)
@@ -70,12 +90,13 @@ local function updateTag(target)
     if not tag then return end
     local label = tag:FindFirstChild("Billboard") and tag.Billboard:FindFirstChild("Label")
     if not label then return end
-    local distance = (target.PrimaryPart and target.PrimaryPart.Position - LocalPlayer.Character and LocalPlayer.Character.PrimaryPart.Position).magnitude
-    if not distance then distance = 0 end
-    local name = (target:IsA("Model") and target.Name) or "Unknown"
-    if Players:GetPlayerFromCharacter(target) then
-        name = Players:GetPlayerFromCharacter(target).Name
+    local rootPart = target:FindFirstChild("HumanoidRootPart") or target:FindFirstChild("Head")
+    if not rootPart or not LocalPlayer.Character then
+        label.Text = "Unknown"
+        return
     end
+    local distance = (rootPart.Position - LocalPlayer.Character.PrimaryPart.Position).Magnitude
+    local name = Players:GetPlayerFromCharacter(target) and Players:GetPlayerFromCharacter(target).Name or target.Name
     label.Text = name .. " | " .. string.format("%.1f", distance) .. " studs"
 end
 
@@ -84,17 +105,9 @@ local function removeTag(target)
     if tag then tag:Destroy() end
 end
 
-local function isNPC(target)
-    return target:IsA("Model") and target:FindFirstChild("Humanoid") and not Players:GetPlayerFromCharacter(target)
-end
-
-local function isPlayerChar(target)
-    return target:IsA("Model") and target:FindFirstChild("Humanoid") and Players:GetPlayerFromCharacter(target)
-end
-
 local function refreshTargets()
     for _, target in pairs(Workspace:GetDescendants()) do
-        if target:IsA("Model") and target:FindFirstChild("Humanoid") then
+        if target:IsA("Model") and target:FindFirstChildOfClass("Humanoid") then
             local isPlayer = Players:GetPlayerFromCharacter(target)
             if isPlayer then
                 if PlayerESPEnabled and target ~= LocalPlayer.Character then
@@ -103,7 +116,7 @@ local function refreshTargets()
                 else
                     removeTag(target)
                 end
-            elseif isNPC(target) then
+            elseif isNPCModel(target) then
                 if NPCESPEnabled then
                     createTag(target)
                     updateTag(target)
@@ -116,7 +129,7 @@ local function refreshTargets()
 end
 
 local function onCharacterAdded(player)
-    player.CharacterAdded:Connect(function(char)
+    player.CharacterAdded:Connect(function()
         wait(0.5)
         refreshTargets()
     end)
@@ -131,7 +144,7 @@ Players.PlayerAdded:Connect(onCharacterAdded)
 RunService.RenderStepped:Connect(function()
     if not PlayerESPEnabled and not NPCESPEnabled then
         for _, target in pairs(Workspace:GetDescendants()) do
-            if target:IsA("Model") and target:FindFirstChild("Humanoid") then
+            if target:IsA("Model") and target:FindFirstChildOfClass("Humanoid") then
                 removeTag(target)
             end
         end
@@ -249,13 +262,6 @@ local function createUI()
     RightPanel.BorderSizePixel = 0
     RightPanel.Parent = ContentContainer
 
-    local CategoryLayout = Instance.new("UIListLayout")
-    CategoryLayout.FillDirection = Enum.FillDirection.Vertical
-    CategoryLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
-    CategoryLayout.VerticalAlignment = Enum.VerticalAlignment.Top
-    CategoryLayout.Padding = UDim.new(0, 5)
-    CategoryLayout.Parent = LeftPanel
-
     local SettingsFrame = Instance.new("Frame")
     SettingsFrame.Size = UDim2.new(1, 0, 1, 0)
     SettingsFrame.BackgroundTransparency = 1
@@ -284,8 +290,8 @@ local function createUI()
         return btn
     end
 
-    local settingsBtn = createCategoryButton("⚙️Settings⚙️", SettingsFrame)
-    local espBtn = createCategoryButton("👁️ESP👁️", ESPFrame)
+    createCategoryButton("⚙️Settings⚙️", SettingsFrame)
+    createCategoryButton("👁️ESP👁️", ESPFrame)
 
     local function createSettingsContent()
         local container = Instance.new("Frame")
