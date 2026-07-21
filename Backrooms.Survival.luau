@@ -6,6 +6,7 @@ local UserInputService = game:GetService("UserInputService")
 
 local LocalPlayer = Players.LocalPlayer
 
+-- State
 local ESPEnabled = false
 local UIMinimized = false
 
@@ -69,7 +70,7 @@ RunService.RenderStepped:Connect(function()
     end
 end)
 
--- UI Creation
+-- UI Creation (Refactored)
 local function createUI()
     local ScreenGui = Instance.new("ScreenGui")
     ScreenGui.Name = "BackroomsSurvivalUI"
@@ -91,9 +92,11 @@ local function createUI()
 
     -- Title Bar
     local TitleBar = Instance.new("Frame")
+    TitleBar.Name = "TitleBar"
     TitleBar.Size = UDim2.new(1, 0, 0, 50)
     TitleBar.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
     TitleBar.Parent = MainFrame
+
     local TitleBarCorner = Instance.new("UICorner")
     TitleBarCorner.CornerRadius = UDim.new(0, 8)
     TitleBarCorner.Parent = TitleBar
@@ -111,12 +114,12 @@ local function createUI()
     Title.TextYAlignment = Enum.TextYAlignment.Top
     Title.Parent = TitleBar
 
-    -- Subtitle
+    -- Subtitle (fixed grammar: "made" instead of "make")
     local SubTitle = Instance.new("TextLabel")
     SubTitle.Size = UDim2.new(1, -70, 0, 15)
     SubTitle.Position = UDim2.new(0, 10, 0, 28)
     SubTitle.BackgroundTransparency = 1
-    SubTitle.Text = "Testing, make by F-197"
+    SubTitle.Text = "Testing, made by F-197"   -- ← corrected
     SubTitle.TextColor3 = Color3.fromRGB(210, 210, 210)
     SubTitle.Font = Enum.Font.SourceSans
     SubTitle.TextSize = 12
@@ -150,73 +153,30 @@ local function createUI()
     ToggleUIButton.Font = Enum.Font.SourceSansBold
     ToggleUIButton.TextSize = 22
     ToggleUIButton.Parent = TitleBar
-    ToggleUIButton.MouseButton1Click:Connect(function()
-        UIMinimized = not UIMinimized
-        local goalSize = UIMinimized and UDim2.new(0, 400, 0, 50) or UDim2.new(0, 400, 0, 250)
-        local tween = TweenService:Create(MainFrame, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Size = goalSize })
-        tween:Play()
-        ToggleUIButton.Text = UIMinimized and "+" or "-"
-        -- Hide panels completely and reset their sizes to avoid layout glitches
-        LeftPanel.Visible = not UIMinimized
-        RightPanel.Visible = not UIMinimized
-        if UIMinimized then
-            LeftPanel.Size = UDim2.new(0, 0, 0, 0)
-            RightPanel.Size = UDim2.new(0, 0, 0, 0)
-        else
-            LeftPanel.Size = UDim2.new(0, 120, 1, -50)
-            RightPanel.Size = UDim2.new(1, -120, 1, -50)
-        end
-    end)
 
-    -- Drag with area restriction (only from TitleBar)
-    local dragging = false
-    local dragOffset = Vector2.new()
+    -- Content Container (holds left panel & right panel)
+    local ContentContainer = Instance.new("Frame")
+    ContentContainer.Name = "ContentContainer"
+    ContentContainer.Size = UDim2.new(1, 0, 1, -50)
+    ContentContainer.Position = UDim2.new(0, 0, 0, 50)
+    ContentContainer.BackgroundTransparency = 1
+    ContentContainer.ClipsDescendants = true
+    ContentContainer.Parent = MainFrame
 
-    local function startDrag(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-            local pos = input.Position
-            local tbPos = TitleBar.AbsolutePosition
-            local tbSize = TitleBar.AbsoluteSize
-            if pos.X >= tbPos.X and pos.X <= tbPos.X + tbSize.X and
-               pos.Y >= tbPos.Y and pos.Y <= tbPos.Y + tbSize.Y then
-                dragging = true
-                dragOffset = pos - MainFrame.AbsolutePosition
-            end
-        end
-    end
-
-    local function updateDrag(input)
-        if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
-            local newPos = input.Position - dragOffset
-            MainFrame.Position = UDim2.new(0, newPos.X, 0, newPos.Y)
-        end
-    end
-
-    local function endDrag(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-            dragging = false
-        end
-    end
-
-    UserInputService.InputBegan:Connect(startDrag)
-    UserInputService.InputChanged:Connect(updateDrag)
-    UserInputService.InputEnded:Connect(endDrag)
-
-    -- Left Panel
+    -- Left Panel (categories)
     local LeftPanel = Instance.new("Frame")
-    LeftPanel.Size = UDim2.new(0, 120, 1, -50)
-    LeftPanel.Position = UDim2.new(0, 0, 0, 50)
+    LeftPanel.Size = UDim2.new(0, 120, 1, 0)
     LeftPanel.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
     LeftPanel.BorderSizePixel = 0
-    LeftPanel.Parent = MainFrame
+    LeftPanel.Parent = ContentContainer
 
-    -- Right Panel
+    -- Right Panel (content)
     local RightPanel = Instance.new("Frame")
-    RightPanel.Size = UDim2.new(1, -120, 1, -50)
-    RightPanel.Position = UDim2.new(0, 120, 0, 50)
+    RightPanel.Size = UDim2.new(1, -120, 1, 0)
+    RightPanel.Position = UDim2.new(0, 120, 0, 0)
     RightPanel.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
     RightPanel.BorderSizePixel = 0
-    RightPanel.Parent = MainFrame
+    RightPanel.Parent = ContentContainer
 
     -- Category Buttons (Left)
     local ESPButton = Instance.new("TextButton")
@@ -328,6 +288,57 @@ local function createUI()
         ESPEnabled = state
         rescanAll()
     end)
+
+    -- Minimize/Expand logic
+    ToggleUIButton.MouseButton1Click:Connect(function()
+        UIMinimized = not UIMinimized
+        local goalSize = UIMinimized and UDim2.new(0, 400, 0, 50) or UDim2.new(0, 400, 0, 250)
+        local tween = TweenService:Create(MainFrame, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Size = goalSize })
+        tween:Play()
+        ToggleUIButton.Text = UIMinimized and "+" or "-"
+
+        if UIMinimized then
+            ContentContainer.Visible = false
+            ContentContainer.Size = UDim2.new(0, 0, 0, 0)
+        else
+            ContentContainer.Visible = true
+            ContentContainer.Size = UDim2.new(1, 0, 1, -50)
+        end
+    end)
+
+    -- Drag (only when clicking on TitleBar)
+    local dragging = false
+    local dragOffset = Vector2.new()
+
+    local function startDrag(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            local pos = input.Position
+            local tbPos = TitleBar.AbsolutePosition
+            local tbSize = TitleBar.AbsoluteSize
+            if pos.X >= tbPos.X and pos.X <= tbPos.X + tbSize.X and
+               pos.Y >= tbPos.Y and pos.Y <= tbPos.Y + tbSize.Y then
+                dragging = true
+                dragOffset = pos - MainFrame.AbsolutePosition
+            end
+        end
+    end
+
+    local function updateDrag(input)
+        if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+            local newPos = input.Position - dragOffset
+            MainFrame.Position = UDim2.new(0, newPos.X, 0, newPos.Y)
+        end
+    end
+
+    local function endDrag(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            dragging = false
+        end
+    end
+
+    UserInputService.InputBegan:Connect(startDrag)
+    UserInputService.InputChanged:Connect(updateDrag)
+    UserInputService.InputEnded:Connect(endDrag)
 
     return ScreenGui, MainFrame
 end
