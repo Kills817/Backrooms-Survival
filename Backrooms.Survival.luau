@@ -50,6 +50,7 @@ local function createTag(target)
 
     local highlight = Instance.new("Highlight")
     highlight.Name = "Highlight"
+    highlight.Adornee = target  -- 关键：附着到模型
     highlight.FillTransparency = 0.5
     highlight.FillColor = Color3.fromRGB(128, 0, 255)
     highlight.OutlineTransparency = 0
@@ -62,7 +63,7 @@ local function createTag(target)
     billboard.Size = UDim2.new(0, 200, 0, 40)
     billboard.StudsOffset = Vector3.new(0, 3.5, 0)
     billboard.AlwaysOnTop = true
-    billboard.Adornee = target  -- 关键：附着到模型
+    billboard.Adornee = target
     billboard.Parent = tag
 
     local label = Instance.new("TextLabel")
@@ -90,13 +91,13 @@ local function updateTag(target)
     
     local rootPart = target:FindFirstChild("HumanoidRootPart") or target:FindFirstChild("Head")
     if not rootPart or not LocalPlayer.Character then
-        label.Text = "Unknown"
+        removeTag(target)  -- 无法定位则移除
         return
     end
     
     local primaryPart = LocalPlayer.Character:FindFirstChild("HumanoidRootPart") or LocalPlayer.Character:FindFirstChild("Head")
     if not primaryPart then
-        label.Text = "Unknown"
+        removeTag(target)
         return
     end
     
@@ -108,7 +109,7 @@ local function updateTag(target)
         name = player.Name
     end
     
-    label.Text = name .. " | " .. string.format("%.1f", distance) .. " studs"
+    label.Text = name .. " | " .. string.format("%.1f", distance) .. " m"  -- 单位改为 m
 end
 
 local function removeTag(target)
@@ -196,7 +197,7 @@ local function createUI()
     TitleBarCorner.CornerRadius = UDim.new(0, 8)
     TitleBarCorner.Parent = TitleBar
 
-    -- Main Title (changed)
+    -- Main Title
     local Title = Instance.new("TextLabel")
     Title.Size = UDim2.new(1, -70, 0, 20)
     Title.Position = UDim2.new(0, 10, 0, 5)
