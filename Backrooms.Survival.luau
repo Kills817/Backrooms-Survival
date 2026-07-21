@@ -7,14 +7,11 @@ local RunService = game:GetService("RunService")
 
 local LocalPlayer = Players.LocalPlayer
 
+-- ===== 状态 =====
 local PlayerESPEnabled = false
 local NPCESPEnabled = false
 local FullbrightEnabled = false
 local UIMinimized = false
-local refreshPending = false
-
-local activeTagTargets = {}
-local tagCreationTime = {}  -- 记录标签创建时间
 
 -- ===== Fullbright =====
 local function applyFullbright(enable)
@@ -53,10 +50,10 @@ local function isNPCModel(model)
     return false
 end
 
--- ===== ESP 标签 =====
+-- ===== ESP 核心 =====
+local activeTags = {}  -- 存储 { target = tagFolder }
 local function createTag(target)
-    if target:FindFirstChild("ESPTag") then return end
-    
+    if activeTags[target] then return end
     local tag = Instance.new("Folder")
     tag.Name = "ESPTag"
     tag.Parent = target
@@ -94,151 +91,130 @@ local function createTag(target)
     label.Text = "Loading..."
     label.Parent = billboard
 
-    -- 记录创建时间
-    tagCreationTime[target] = tick()
-    -- 加入缓存
-    if not activeTagTargets[target] then
-        table.insert(activeTagTargets, target)
-    end
+    activeTags[target] = tag
 end
 
 local function updateTag(target)
-    local tag = target:FindFirstChild("ESPTag")
+    local tag = activeTags[target]
     if not tag then return end
     local billboard = tag:FindFirstChild("Billboard")
     if not billboard then return end
     local label = billboard:FindFirstChild("Label")
     if not label then return end
-    
+
     if not LocalPlayer.Character then
-        label.Text = "Waiting..."
+        label.Text = "等待角色..."
         return
     end
-    
+
     local rootPart = target:FindFirstChild("HumanoidRootPart") or target:FindFirstChild("Head")
     if not rootPart then
-        removeTag(target)
+        label.Text = "无Root"
         return
     end
-    
+
     local primaryPart = LocalPlayer.Character:FindFirstChild("HumanoidRootPart") or LocalPlayer.Character:FindFirstChild("Head")
     if not primaryPart then
-        label.Text = "Waiting..."
+        label.Text = "等待角色..."
         return
     end
-    
+
     local distance = (rootPart.Position - primaryPart.Position).Magnitude
     local name = target.Name
     local player = Players:GetPlayerFromCharacter(target)
     if player then
         name = player.Name
     end
-    
+
     label.Text = name .. " | " .. string.format("%.1f", distance) .. " m"
 end
 
 local function removeTag(target)
-    local tag = target:FindFirstChild("ESPTag")
+    local tag = activeTags[target]
     if tag then
-        -- 从缓存中移除
-        for i, t in ipairs(activeTagTargets) do
-            if t == target then
-                table.remove(activeTagTargets, i)
-                break
-            end
-        end
-        tagCreationTime[target] = nil
         tag:Destroy()
+        activeTags[target] = nil
     end
 end
 
 local function clearAllESP()
-    for _, target in pairs(activeTagTargets) do
-        local tag = target:FindFirstChild("ESPTag")
-        if tag then tag:Destroy() end
+    for target, tag in pairs(activeTags) do
+        tag:Destroy()
     end
-    activeTagTargets = {}
-    tagCreationTime = {}
+    activeTags = {}
 end
 
+-- ===== 扫描并更新所有目标 =====
 local function refreshTargets()
-    if refreshPending then return end
-    refreshPending = true
-    task.delay(0.1, function()
-        refreshPending = false
-        -- 先移除当前所有标签（因为开关状态可能变化）
-        clearAllESP()
-        
-        for _, target in pairs(Workspace:GetDescendants()) do
-            if target:IsA("Model") and target:FindFirstChildOfClass("Humanoid") then
-                local isPlayer = Players:GetPlayerFromCharacter(target)
-                if isPlayer then
-                    if PlayerESPEnabled and target ~= LocalPlayer.Character then
-                        createTag(target)
-                        updateTag(target)
-                    end
-                elseif isNPCModel(target) then
-                    if NPCESPEnabled then
-                        createTag(target)
-                        updateTag(target)
-                    end
+    -- 先清理所有现有标签（因为开关状态可能变化）
+    clearAllESP()
+
+    for _, target in pairs(Workspace:GetDescendants()) do
+        if target:IsA("Model") and target:FindFirstChildOfClass("Humanoid") then
+            local isPlayer = Players:GetPlayerFromCharacter(target)
+            if isPlayer then
+                if PlayerESPEnabled and target ~= LocalPlayer.Character then
+                    createTag(target)
+                    updateTag(target)
+                end
+            elseif isNPCModel(target) then
+                if NPCESPEnabled then
+                    createTag(target)
+                    updateTag(target)
                 end
             end
         end
-    end)
+    end
 end
 
--- 实时更新：每2帧更新一次所有标签，并清理无效标签
+-- ===== 实时更新距离（每2帧） =====
 local frameCounter = 0
 RunService.Heartbeat:Connect(function()
     frameCounter = frameCounter + 1
     if frameCounter % 2 ~= 0 then return end
-    
+
     if not PlayerESPEnabled and not NPCESPEnabled then
-        if #activeTagTargets > 0 then
+        if next(activeTags) then
             clearAllESP()
         end
         return
     end
-    
-    local now = tick()
-    local toRemove = {}
-    for i, target in ipairs(activeTagTargets) do
+
+    -- 更新已有标签的距离
+    for target, tag in pairs(activeTags) do
         if target and target:IsA("Model") and target:FindFirstChild("ESPTag") then
-            -- 更新标签文本
             updateTag(target)
-            -- 检查标签文本是否仍然无效，且超时
-            local tag = target:FindFirstChild("ESPTag")
-            if tag then
-                local billboard = tag:FindFirstChild("Billboard")
-                if billboard then
-                    local label = billboard:FindFirstChild("Label")
-                    if label then
-                        local text = label.Text
-                        if text == "Loading..." or text == "Waiting..." or text == "Unknown" or text == "No Root" then
-                            local createTime = tagCreationTime[target]
-                            if createTime and now - createTime > 3 then
-                                table.insert(toRemove, i)
-                            end
+        else
+            removeTag(target)
+        end
+    end
+
+    -- 检查是否有新目标（玩家重生或新NPC出现），简单扫描一次（每2帧扫描，开销可接受）
+    -- 但为了避免遗漏，我们每10帧做一次完全刷新（保证新目标被捕捉）
+    if frameCounter % 10 == 0 then
+        -- 快速检查是否需要新增标签（不清理现有）
+        for _, target in pairs(Workspace:GetDescendants()) do
+            if target:IsA("Model") and target:FindFirstChildOfClass("Humanoid") then
+                if not activeTags[target] then
+                    local isPlayer = Players:GetPlayerFromCharacter(target)
+                    if isPlayer then
+                        if PlayerESPEnabled and target ~= LocalPlayer.Character then
+                            createTag(target)
+                            updateTag(target)
+                        end
+                    elseif isNPCModel(target) then
+                        if NPCESPEnabled then
+                            createTag(target)
+                            updateTag(target)
                         end
                     end
                 end
             end
-        else
-            -- 目标无效，标记移除
-            table.insert(toRemove, i)
-        end
-    end
-    
-    -- 从后往前移除
-    for i = #toRemove, 1, -1 do
-        local idx = toRemove[i]
-        if activeTagTargets[idx] then
-            removeTag(activeTagTargets[idx])
         end
     end
 end)
 
+-- ===== 角色添加事件 =====
 local function onCharacterAdded(player)
     player.CharacterAdded:Connect(function()
         task.wait(0.5)
@@ -251,11 +227,7 @@ for _, player in pairs(Players:GetPlayers()) do
 end
 Players.PlayerAdded:Connect(onCharacterAdded)
 
--- ===== UI 创建（与之前相同，此处省略但保留） =====
--- [完整 UI 代码，与之前版本一致，确保 createUI 函数完整]
--- 由于篇幅，UI 部分不变，继续使用之前的 UI 代码。
--- 以下为 createUI 的完整实现（与之前版本完全相同，但为了完整性粘贴）
-
+-- ===== UI 创建 =====
 local function createUI()
     if LocalPlayer.PlayerGui:FindFirstChild("BackroomsSurvivalUI") then return end
 
@@ -288,7 +260,6 @@ local function createUI()
     TitleBarCorner.CornerRadius = UDim.new(0, 8)
     TitleBarCorner.Parent = TitleBar
 
-    -- Main Title
     local Title = Instance.new("TextLabel")
     Title.Size = UDim2.new(1, -70, 0, 20)
     Title.Position = UDim2.new(0, 10, 0, 5)
@@ -301,12 +272,11 @@ local function createUI()
     Title.TextYAlignment = Enum.TextYAlignment.Top
     Title.Parent = TitleBar
 
-    -- Subtitle
     local SubTitle = Instance.new("TextLabel")
     SubTitle.Size = UDim2.new(1, -70, 0, 15)
     SubTitle.Position = UDim2.new(0, 10, 0, 28)
     SubTitle.BackgroundTransparency = 1
-    SubTitle.Text = "version : v0.1.5.5"
+    SubTitle.Text = "version : v0.1.6.0"
     SubTitle.TextColor3 = Color3.fromRGB(210, 210, 210)
     SubTitle.Font = Enum.Font.SourceSans
     SubTitle.TextSize = 12
@@ -370,7 +340,7 @@ local function createUI()
     RightPanel.BorderSizePixel = 0
     RightPanel.Parent = ContentContainer
 
-    -- Scrolling frames
+    -- 滚动框架工厂
     local function createScrollingFrame(name)
         local sc = Instance.new("ScrollingFrame")
         sc.Name = name
@@ -400,12 +370,16 @@ local function createUI()
         return sc, container, layout
     end
 
+    -- 创建各分类的滚动框
+    local UpdateScroller, UpdateContainer, UpdateLayout = createScrollingFrame("UpdateScroller")
     local SettingsScroller, SettingsContainer, SettingsLayout = createScrollingFrame("SettingsScroller")
     local ESPScroller, ESPContainer, ESPLayout = createScrollingFrame("ESPScroller")
 
+    UpdateScroller.Visible = false
     SettingsScroller.Visible = false
     ESPScroller.Visible = false
 
+    -- 左侧分类按钮（翻译后）
     local selectedButton = nil
     local function createCategoryButton(text, targetScroller, yPos)
         local btn = Instance.new("TextButton")
@@ -423,16 +397,49 @@ local function createUI()
             end
             btn.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
             selectedButton = btn
+            UpdateScroller.Visible = (targetScroller == UpdateScroller)
             SettingsScroller.Visible = (targetScroller == SettingsScroller)
             ESPScroller.Visible = (targetScroller == ESPScroller)
         end)
         return btn
     end
 
-    createCategoryButton("⚙️Settings⚙️", SettingsScroller, 0)
-    createCategoryButton("👁️ESP👁️", ESPScroller, 40)
+    createCategoryButton("🔍更新内容🔍", UpdateScroller, 0)
+    createCategoryButton("⚙️常规", SettingsScroller, 40)
+    createCategoryButton("👁️透视", ESPScroller, 80)
 
-    -- Build Settings
+    -- ===== 更新内容分类 =====
+    local function buildUpdateContent()
+        local versionLabel = Instance.new("TextLabel")
+        versionLabel.Size = UDim2.new(1, 0, 0, 25)
+        versionLabel.BackgroundTransparency = 1
+        versionLabel.Text = "V0.1.6.0"
+        versionLabel.TextColor3 = Color3.fromRGB(160, 160, 160) -- 灰色
+        versionLabel.Font = Enum.Font.SourceSansBold
+        versionLabel.TextSize = 16
+        versionLabel.TextXAlignment = Enum.TextXAlignment.Left
+        versionLabel.Parent = UpdateContainer
+
+        local items = {
+            "▪ 该版本起，可查看更新内容。",
+            "▪ 重构透视代码逻辑。"
+        }
+        for _, line in ipairs(items) do
+            local lbl = Instance.new("TextLabel")
+            lbl.Size = UDim2.new(1, 0, 0, 25)
+            lbl.BackgroundTransparency = 1
+            lbl.Text = line
+            lbl.TextColor3 = Color3.new(1, 1, 1)
+            lbl.Font = Enum.Font.SourceSans
+            lbl.TextSize = 14
+            lbl.TextXAlignment = Enum.TextXAlignment.Left
+            lbl.TextWrapped = true
+            lbl.Parent = UpdateContainer
+        end
+    end
+    buildUpdateContent()
+
+    -- ===== 常规分类 =====
     local function buildSettings()
         local function createRow(labelText, initialState, callback)
             local row = Instance.new("Frame")
@@ -500,14 +507,14 @@ local function createUI()
             end)
         end
 
-        createRow("Fullbright", FullbrightEnabled, function(value)
+        createRow("全图高亮", FullbrightEnabled, function(value)
             FullbrightEnabled = value
             applyFullbright(value)
         end)
     end
     buildSettings()
 
-    -- Build ESP
+    -- ===== 透视分类 =====
     local function buildESP()
         local function createRow(labelText, initialState, callback)
             local row = Instance.new("Frame")
@@ -575,7 +582,7 @@ local function createUI()
             end)
         end
 
-        createRow("Player ESP", PlayerESPEnabled, function(value)
+        createRow("玩家ESP", PlayerESPEnabled, function(value)
             PlayerESPEnabled = value
             refreshTargets()
         end)
@@ -587,7 +594,7 @@ local function createUI()
     end
     buildESP()
 
-    -- Minimize
+    -- 最小化/展开
     MinButton.MouseButton1Click:Connect(function()
         UIMinimized = not UIMinimized
         local targetSize = UIMinimized and UDim2.new(0, 400, 0, 50) or UDim2.new(0, 400, 0, 250)
@@ -603,7 +610,7 @@ local function createUI()
         end
     end)
 
-    -- Drag
+    -- 拖动
     local dragging = false
     local dragOffset = Vector2.new()
 
