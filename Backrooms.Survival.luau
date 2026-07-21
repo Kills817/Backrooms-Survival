@@ -7,14 +7,12 @@ local RunService = game:GetService("RunService")
 
 local LocalPlayer = Players.LocalPlayer
 
--- 状态
 local PlayerESPEnabled = false
 local NPCESPEnabled = false
 local FullbrightEnabled = false
 local NoclipEnabled = false
 local UIMinimized = false
 
--- ===== Fullbright =====
 local function applyFullbright(enable)
     if enable then
         Lighting.Brightness = 2
@@ -37,14 +35,11 @@ Lighting.LightingChanged:Connect(function()
     end
 end)
 
--- ===== Noclip =====
 local noclipConnection = nil
-
 local function toggleNoclip(enable)
     NoclipEnabled = enable
     local char = LocalPlayer.Character
     if not char then return end
-
     if enable then
         if noclipConnection then noclipConnection:Disconnect() end
         noclipConnection = RunService.Stepped:Connect(function()
@@ -74,12 +69,11 @@ end
 
 LocalPlayer.CharacterAdded:Connect(function(char)
     if NoclipEnabled then
-        task.wait(0.5)
+        wait(0.5)
         toggleNoclip(true)
     end
 end)
 
--- ===== NPC 识别 =====
 local NPCsFolder = Workspace:FindFirstChild("NPCs")
 local function isNPCModel(model)
     if not model or not model:IsA("Model") then return false end
@@ -93,7 +87,6 @@ local function isNPCModel(model)
     return false
 end
 
--- ===== 标签管理 =====
 local playerTags = {}
 local npcTags = {}
 local tagCreationTime = {}
@@ -134,8 +127,8 @@ local function createTag(target, isPlayer)
 
     local billboard = Instance.new("BillboardGui")
     billboard.Name = "Billboard"
-    billboard.Size = UDim2.new(0, 200, 0, 40)
-    billboard.StudsOffset = Vector3.new(0, 3.5, 0)
+    billboard.Size = UDim2.new(0, 200, 0, 50)
+    billboard.StudsOffset = Vector3.new(0, 5, 0)   -- 抬高
     billboard.AlwaysOnTop = true
     billboard.Adornee = target
     billboard.Parent = tag
@@ -146,7 +139,7 @@ local function createTag(target, isPlayer)
     label.BackgroundTransparency = 1
     label.TextColor3 = Color3.new(1, 1, 1)
     label.Font = Enum.Font.SourceSansBold
-    label.TextSize = 14
+    label.TextSize = 20                    -- 字体加大
     label.TextStrokeColor3 = Color3.new(0, 0, 0)
     label.TextStrokeTransparency = 0.3
     label.TextWrapped = true
@@ -158,7 +151,6 @@ local function createTag(target, isPlayer)
     tagDict[target] = tag
     tagCreationTime[target] = tick()
 end
-
 local function updateTag(target)
     local tag = playerTags[target] or npcTags[target]
     if not tag then return end
@@ -196,7 +188,12 @@ local function updateTag(target)
         name = player.Name
     end
 
-    label.Text = name .. " | " .. string.format("%.1f", distance) .. " m"
+    -- 读取生命值
+    local humanoid = target:FindFirstChildOfClass("Humanoid")
+    local hp = humanoid and math.floor(humanoid.Health) or "??"
+    local hpText = (type(hp) == "number") and ("HP: " .. hp) or "HP: ??"
+
+    label.Text = name .. " | " .. string.format("%.1f", distance) .. " m | " .. hpText
 end
 
 local function clearAllESP()
@@ -211,14 +208,12 @@ local function clearAllESP()
     tagCreationTime = {}
 end
 
--- ===== 增量更新（用于开关切换时） =====
 local function updatePlayerESP()
     if PlayerESPEnabled then
         for _, target in pairs(Workspace:GetDescendants()) do
             if target:IsA("Model") and target:FindFirstChildOfClass("Humanoid") then
                 local isPlayer = Players:GetPlayerFromCharacter(target)
                 if isPlayer and target ~= LocalPlayer.Character and not playerTags[target] then
-                    -- 只在距离<=500时创建
                     local root = target:FindFirstChild("HumanoidRootPart") or target:FindFirstChild("Head")
                     if root and LocalPlayer.Character then
                         local pp = LocalPlayer.Character:FindFirstChild("HumanoidRootPart") or LocalPlayer.Character:FindFirstChild("Head")
@@ -267,21 +262,16 @@ local function updateNPCESP()
         npcTags = {}
     end
 end
-
--- ===== 实时更新循环（5帧更新距离/清理，20帧扫描新目标） =====
 local frameCounter = 0
 RunService.Heartbeat:Connect(function()
     frameCounter = frameCounter + 1
 
-    -- 每5帧执行一次：更新距离 + 清理无效/超出距离的标签
     if frameCounter % 5 == 0 then
         local now = tick()
         local toRemove = {}
 
-        -- 处理玩家标签
         for target, tag in pairs(playerTags) do
             if target and target:IsA("Model") and target:FindFirstChild("ESPTag") then
-                -- 计算距离，若>500则标记删除，否则更新文本
                 local rootPart = target:FindFirstChild("HumanoidRootPart") or target:FindFirstChild("Head")
                 local valid = false
                 if rootPart and LocalPlayer.Character then
@@ -290,7 +280,6 @@ RunService.Heartbeat:Connect(function()
                         local dist = (rootPart.Position - pp.Position).Magnitude
                         if dist <= 500 then
                             valid = true
-                            -- 更新文本（内部会再计算一次距离，但可接受）
                             updateTag(target)
                         end
                     end
@@ -298,7 +287,6 @@ RunService.Heartbeat:Connect(function()
                 if not valid then
                     table.insert(toRemove, target)
                 else
-                    -- 检查无效文本
                     local label = tag:FindFirstChild("Billboard") and tag.Billboard:FindFirstChild("Label")
                     if label then
                         local text = label.Text
@@ -312,7 +300,6 @@ RunService.Heartbeat:Connect(function()
             end
         end
 
-        -- 处理 NPC 标签
         for target, tag in pairs(npcTags) do
             if target and target:IsA("Model") and target:FindFirstChild("ESPTag") then
                 local rootPart = target:FindFirstChild("HumanoidRootPart") or target:FindFirstChild("Head")
@@ -343,13 +330,11 @@ RunService.Heartbeat:Connect(function()
             end
         end
 
-        -- 执行删除
         for _, target in ipairs(toRemove) do
             removeTag(target)
         end
     end
 
-    -- 每20帧扫描一次新目标（距离<=500才创建）
     if frameCounter % 20 == 0 then
         for _, target in pairs(Workspace:GetDescendants()) do
             if target:IsA("Model") and target:FindFirstChildOfClass("Humanoid") then
@@ -388,10 +373,9 @@ RunService.Heartbeat:Connect(function()
     end
 end)
 
--- ===== 角色添加 =====
 local function onCharacterAdded(player)
     player.CharacterAdded:Connect(function()
-        task.wait(0.5)
+        wait(0.5)
         if PlayerESPEnabled then updatePlayerESP() end
         if NPCESPEnabled then updateNPCESP() end
         if NoclipEnabled then toggleNoclip(true) end
@@ -402,8 +386,6 @@ for _, player in pairs(Players:GetPlayers()) do
     onCharacterAdded(player)
 end
 Players.PlayerAdded:Connect(onCharacterAdded)
-
--- ===== UI =====
 local function createUI()
     if LocalPlayer.PlayerGui:FindFirstChild("BackroomsSurvivalUI") then return end
 
@@ -425,7 +407,6 @@ local function createUI()
     UICorner.CornerRadius = UDim.new(0, 8)
     UICorner.Parent = MainFrame
 
-    -- Title Bar
     local TitleBar = Instance.new("Frame")
     TitleBar.Name = "TitleBar"
     TitleBar.Size = UDim2.new(1, 0, 0, 50)
@@ -460,7 +441,6 @@ local function createUI()
     SubTitle.TextYAlignment = Enum.TextYAlignment.Top
     SubTitle.Parent = TitleBar
 
-    -- Close Button
     local CloseButton = Instance.new("TextButton")
     CloseButton.Size = UDim2.new(0, 30, 0, 30)
     CloseButton.Position = UDim2.new(1, -35, 0, 10)
@@ -480,7 +460,6 @@ local function createUI()
         ScreenGui:Destroy()
     end)
 
-    -- Minimize Button
     local MinButton = Instance.new("TextButton")
     MinButton.Size = UDim2.new(0, 30, 0, 30)
     MinButton.Position = UDim2.new(1, -70, 0, 10)
@@ -491,7 +470,6 @@ local function createUI()
     MinButton.TextSize = 22
     MinButton.Parent = TitleBar
 
-    -- Content Container
     local ContentContainer = Instance.new("Frame")
     ContentContainer.Name = "ContentContainer"
     ContentContainer.Size = UDim2.new(1, 0, 1, -50)
@@ -500,14 +478,12 @@ local function createUI()
     ContentContainer.ClipsDescendants = true
     ContentContainer.Parent = MainFrame
 
-    -- Left Panel
     local LeftPanel = Instance.new("Frame")
     LeftPanel.Size = UDim2.new(0, 120, 1, 0)
     LeftPanel.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
     LeftPanel.BorderSizePixel = 0
     LeftPanel.Parent = ContentContainer
 
-    -- Right Panel
     local RightPanel = Instance.new("Frame")
     RightPanel.Size = UDim2.new(1, -120, 1, 0)
     RightPanel.Position = UDim2.new(0, 120, 0, 0)
@@ -515,7 +491,6 @@ local function createUI()
     RightPanel.BorderSizePixel = 0
     RightPanel.Parent = ContentContainer
 
-    -- 滚动框架工厂
     local function createScrollingFrame(name)
         local sc = Instance.new("ScrollingFrame")
         sc.Name = name
@@ -545,7 +520,6 @@ local function createUI()
         return sc, container, layout
     end
 
-    -- 创建各分类的滚动框
     local UpdateScroller, UpdateContainer, UpdateLayout = createScrollingFrame("UpdateScroller")
     local SettingsScroller, SettingsContainer, SettingsLayout = createScrollingFrame("SettingsScroller")
     local ESPScroller, ESPContainer, ESPLayout = createScrollingFrame("ESPScroller")
@@ -554,7 +528,6 @@ local function createUI()
     SettingsScroller.Visible = false
     ESPScroller.Visible = false
 
-    -- 左侧分类按钮
     local selectedButton = nil
     local function createCategoryButton(text, targetScroller, yPos)
         local btn = Instance.new("TextButton")
@@ -583,7 +556,6 @@ local function createUI()
     createCategoryButton("⚙️基础功能⚙️", SettingsScroller, 40)
     createCategoryButton("👁️透视👁️", ESPScroller, 80)
 
-    -- ===== 更新内容 =====
     local function buildUpdateContent()
         local versionLabel = Instance.new("TextLabel")
         versionLabel.Size = UDim2.new(1, 0, 0, 25)
@@ -614,8 +586,6 @@ local function createUI()
         end
     end
     buildUpdateContent()
-
-    -- ===== 基础功能 =====
     local function buildSettings()
         local function createRow(labelText, initialState, callback)
             local row = Instance.new("Frame")
@@ -694,7 +664,6 @@ local function createUI()
     end
     buildSettings()
 
-    -- ===== 透视 =====
     local function buildESP()
         local function createRow(labelText, initialState, callback)
             local row = Instance.new("Frame")
@@ -788,7 +757,6 @@ local function createUI()
     end
     buildESP()
 
-    -- 最小化/展开
     MinButton.MouseButton1Click:Connect(function()
         UIMinimized = not UIMinimized
         local targetSize = UIMinimized and UDim2.new(0, 400, 0, 50) or UDim2.new(0, 400, 0, 250)
@@ -804,10 +772,41 @@ local function createUI()
         end
     end)
 
-    -- 拖动
     local dragging = false
     local dragOffset = Vector2.new()
 
     local function onInputBegan(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-            local pos = Vector2.new(input
+            local pos = Vector2.new(input.Position.X, input.Position.Y)
+            local tbPos = TitleBar.AbsolutePosition
+            local tbSize = TitleBar.AbsoluteSize
+            if pos.X >= tbPos.X and pos.X <= tbPos.X + tbSize.X and
+               pos.Y >= tbPos.Y and pos.Y <= tbPos.Y + tbSize.Y then
+                dragging = true
+                dragOffset = pos - Vector2.new(MainFrame.AbsolutePosition.X, MainFrame.AbsolutePosition.Y)
+            end
+        end
+    end
+
+    local function onInputChanged(input)
+        if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+            local pos = Vector2.new(input.Position.X, input.Position.Y)
+            local newPos = pos - dragOffset
+            MainFrame.Position = UDim2.new(0, newPos.X, 0, newPos.Y)
+        end
+    end
+
+    local function onInputEnded(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            dragging = false
+        end
+    end
+
+    UserInputService.InputBegan:Connect(onInputBegan)
+    UserInputService.InputChanged:Connect(onInputChanged)
+    UserInputService.InputEnded:Connect(onInputEnded)
+
+    return ScreenGui
+end
+
+createUI()
