@@ -50,7 +50,7 @@ local function createTag(target)
 
     local highlight = Instance.new("Highlight")
     highlight.Name = "Highlight"
-    highlight.Adornee = target  -- 关键：附着到模型
+    highlight.Adornee = target
     highlight.FillTransparency = 0.5
     highlight.FillColor = Color3.fromRGB(128, 0, 255)
     highlight.OutlineTransparency = 0
@@ -78,6 +78,7 @@ local function createTag(target)
     label.TextWrapped = true
     label.TextXAlignment = Enum.TextXAlignment.Center
     label.TextYAlignment = Enum.TextYAlignment.Center
+    label.Text = "Loading..."  -- 初始占位
     label.Parent = billboard
 end
 
@@ -91,7 +92,7 @@ local function updateTag(target)
     
     local rootPart = target:FindFirstChild("HumanoidRootPart") or target:FindFirstChild("Head")
     if not rootPart or not LocalPlayer.Character then
-        removeTag(target)  -- 无法定位则移除
+        removeTag(target)
         return
     end
     
@@ -109,7 +110,7 @@ local function updateTag(target)
         name = player.Name
     end
     
-    label.Text = name .. " | " .. string.format("%.1f", distance) .. " m"  -- 单位改为 m
+    label.Text = name .. " | " .. string.format("%.1f", distance) .. " m"
 end
 
 local function removeTag(target)
@@ -130,6 +131,26 @@ local function refreshTargets()
     refreshPending = true
     task.delay(0.1, function()
         refreshPending = false
+        -- 先清理无效标签（文本为 Label、Unknown 或 Loading...）
+        for _, target in pairs(Workspace:GetDescendants()) do
+            if target:IsA("Model") then
+                local tag = target:FindFirstChild("ESPTag")
+                if tag then
+                    local billboard = tag:FindFirstChild("Billboard")
+                    if billboard then
+                        local label = billboard:FindFirstChild("Label")
+                        if label then
+                            local text = label.Text
+                            if text == "Label" or text == "Unknown" or text == "Loading..." then
+                                removeTag(target)
+                            end
+                        end
+                    end
+                end
+            end
+        end
+        
+        -- 重新扫描并创建有效标签
         for _, target in pairs(Workspace:GetDescendants()) do
             if target:IsA("Model") and target:FindFirstChildOfClass("Humanoid") then
                 local isPlayer = Players:GetPlayerFromCharacter(target)
@@ -210,12 +231,12 @@ local function createUI()
     Title.TextYAlignment = Enum.TextYAlignment.Top
     Title.Parent = TitleBar
 
-    -- Subtitle
+    -- Subtitle (version updated)
     local SubTitle = Instance.new("TextLabel")
     SubTitle.Size = UDim2.new(1, -70, 0, 15)
     SubTitle.Position = UDim2.new(0, 10, 0, 28)
     SubTitle.BackgroundTransparency = 1
-    SubTitle.Text = "version : v0.1.3.2"
+    SubTitle.Text = "version : v0.1.5.5"
     SubTitle.TextColor3 = Color3.fromRGB(210, 210, 210)
     SubTitle.Font = Enum.Font.SourceSans
     SubTitle.TextSize = 12
