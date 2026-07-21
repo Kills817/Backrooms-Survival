@@ -211,15 +211,25 @@ local function clearAllESP()
     tagCreationTime = {}
 end
 
--- ===== 增量更新 =====
+-- ===== 增量更新（用于开关切换时） =====
 local function updatePlayerESP()
     if PlayerESPEnabled then
         for _, target in pairs(Workspace:GetDescendants()) do
             if target:IsA("Model") and target:FindFirstChildOfClass("Humanoid") then
                 local isPlayer = Players:GetPlayerFromCharacter(target)
                 if isPlayer and target ~= LocalPlayer.Character and not playerTags[target] then
-                    createTag(target, true)
-                    updateTag(target)
+                    -- 只在距离<=500时创建
+                    local root = target:FindFirstChild("HumanoidRootPart") or target:FindFirstChild("Head")
+                    if root and LocalPlayer.Character then
+                        local pp = LocalPlayer.Character:FindFirstChild("HumanoidRootPart") or LocalPlayer.Character:FindFirstChild("Head")
+                        if pp then
+                            local dist = (root.Position - pp.Position).Magnitude
+                            if dist <= 500 then
+                                createTag(target, true)
+                                updateTag(target)
+                            end
+                        end
+                    end
                 end
             end
         end
@@ -236,8 +246,17 @@ local function updateNPCESP()
         for _, target in pairs(Workspace:GetDescendants()) do
             if target:IsA("Model") and target:FindFirstChildOfClass("Humanoid") then
                 if isNPCModel(target) and not npcTags[target] then
-                    createTag(target, false)
-                    updateTag(target)
+                    local root = target:FindFirstChild("HumanoidRootPart") or target:FindFirstChild("Head")
+                    if root and LocalPlayer.Character then
+                        local pp = LocalPlayer.Character:FindFirstChild("HumanoidRootPart") or LocalPlayer.Character:FindFirstChild("Head")
+                        if pp then
+                            local dist = (root.Position - pp.Position).Magnitude
+                            if dist <= 500 then
+                                createTag(target, false)
+                                updateTag(target)
+                            end
+                        end
+                    end
                 end
             end
         end
@@ -249,63 +268,119 @@ local function updateNPCESP()
     end
 end
 
--- ===== 实时更新循环（3帧更新距离，12帧扫描新目标） =====
+-- ===== 实时更新循环（5帧更新距离/清理，20帧扫描新目标） =====
 local frameCounter = 0
 RunService.Heartbeat:Connect(function()
     frameCounter = frameCounter + 1
-    if frameCounter % 3 ~= 0 then return end  -- 每3帧更新一次
 
-    local now = tick()
-    local toRemove = {}
+    -- 每5帧执行一次：更新距离 + 清理无效/超出距离的标签
+    if frameCounter % 5 == 0 then
+        local now = tick()
+        local toRemove = {}
 
-    for target, tag in pairs(playerTags) do
-        if target and target:IsA("Model") and target:FindFirstChild("ESPTag") then
-            updateTag(target)
-            local label = tag:FindFirstChild("Billboard") and tag.Billboard:FindFirstChild("Label")
-            if label then
-                local text = label.Text
-                if text == "Label" or (text == "Loading..." and tagCreationTime[target] and now - tagCreationTime[target] > 3) then
-                    table.insert(toRemove, target)
+        -- 处理玩家标签
+        for target, tag in pairs(playerTags) do
+            if target and target:IsA("Model") and target:FindFirstChild("ESPTag") then
+                -- 计算距离，若>500则标记删除，否则更新文本
+                local rootPart = target:FindFirstChild("HumanoidRootPart") or target:FindFirstChild("Head")
+                local valid = false
+                if rootPart and LocalPlayer.Character then
+                    local pp = LocalPlayer.Character:FindFirstChild("HumanoidRootPart") or LocalPlayer.Character:FindFirstChild("Head")
+                    if pp then
+                        local dist = (rootPart.Position - pp.Position).Magnitude
+                        if dist <= 500 then
+                            valid = true
+                            -- 更新文本（内部会再计算一次距离，但可接受）
+                            updateTag(target)
+                        end
+                    end
                 end
+                if not valid then
+                    table.insert(toRemove, target)
+                else
+                    -- 检查无效文本
+                    local label = tag:FindFirstChild("Billboard") and tag.Billboard:FindFirstChild("Label")
+                    if label then
+                        local text = label.Text
+                        if text == "Label" or (text == "Loading..." and tagCreationTime[target] and now - tagCreationTime[target] > 3) then
+                            table.insert(toRemove, target)
+                        end
+                    end
+                end
+            else
+                table.insert(toRemove, target)
             end
-        else
-            table.insert(toRemove, target)
+        end
+
+        -- 处理 NPC 标签
+        for target, tag in pairs(npcTags) do
+            if target and target:IsA("Model") and target:FindFirstChild("ESPTag") then
+                local rootPart = target:FindFirstChild("HumanoidRootPart") or target:FindFirstChild("Head")
+                local valid = false
+                if rootPart and LocalPlayer.Character then
+                    local pp = LocalPlayer.Character:FindFirstChild("HumanoidRootPart") or LocalPlayer.Character:FindFirstChild("Head")
+                    if pp then
+                        local dist = (rootPart.Position - pp.Position).Magnitude
+                        if dist <= 500 then
+                            valid = true
+                            updateTag(target)
+                        end
+                    end
+                end
+                if not valid then
+                    table.insert(toRemove, target)
+                else
+                    local label = tag:FindFirstChild("Billboard") and tag.Billboard:FindFirstChild("Label")
+                    if label then
+                        local text = label.Text
+                        if text == "Label" or (text == "Loading..." and tagCreationTime[target] and now - tagCreationTime[target] > 3) then
+                            table.insert(toRemove, target)
+                        end
+                    end
+                end
+            else
+                table.insert(toRemove, target)
+            end
+        end
+
+        -- 执行删除
+        for _, target in ipairs(toRemove) do
+            removeTag(target)
         end
     end
 
-    for target, tag in pairs(npcTags) do
-        if target and target:IsA("Model") and target:FindFirstChild("ESPTag") then
-            updateTag(target)
-            local label = tag:FindFirstChild("Billboard") and tag.Billboard:FindFirstChild("Label")
-            if label then
-                local text = label.Text
-                if text == "Label" or (text == "Loading..." and tagCreationTime[target] and now - tagCreationTime[target] > 3) then
-                    table.insert(toRemove, target)
-                end
-            end
-        else
-            table.insert(toRemove, target)
-        end
-    end
-
-    for _, target in ipairs(toRemove) do
-        removeTag(target)
-    end
-
-    -- 每12帧扫描一次新目标
-    if frameCounter % 12 == 0 then
+    -- 每20帧扫描一次新目标（距离<=500才创建）
+    if frameCounter % 20 == 0 then
         for _, target in pairs(Workspace:GetDescendants()) do
             if target:IsA("Model") and target:FindFirstChildOfClass("Humanoid") then
                 local isPlayer = Players:GetPlayerFromCharacter(target)
                 if isPlayer then
                     if PlayerESPEnabled and target ~= LocalPlayer.Character and not playerTags[target] then
-                        createTag(target, true)
-                        updateTag(target)
+                        local root = target:FindFirstChild("HumanoidRootPart") or target:FindFirstChild("Head")
+                        if root and LocalPlayer.Character then
+                            local pp = LocalPlayer.Character:FindFirstChild("HumanoidRootPart") or LocalPlayer.Character:FindFirstChild("Head")
+                            if pp then
+                                local dist = (root.Position - pp.Position).Magnitude
+                                if dist <= 500 then
+                                    createTag(target, true)
+                                    updateTag(target)
+                                end
+                            end
+                        end
                     end
                 elseif isNPCModel(target) then
                     if NPCESPEnabled and not npcTags[target] then
-                        createTag(target, false)
-                        updateTag(target)
+                        local root = target:FindFirstChild("HumanoidRootPart") or target:FindFirstChild("Head")
+                        if root and LocalPlayer.Character then
+                            local pp = LocalPlayer.Character:FindFirstChild("HumanoidRootPart") or LocalPlayer.Character:FindFirstChild("Head")
+                            if pp then
+                                local dist = (root.Position - pp.Position).Magnitude
+                                if dist <= 500 then
+                                    createTag(target, false)
+                                    updateTag(target)
+                                end
+                            end
+                        end
                     end
                 end
             end
@@ -735,36 +810,4 @@ local function createUI()
 
     local function onInputBegan(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-            local pos = Vector2.new(input.Position.X, input.Position.Y)
-            local tbPos = TitleBar.AbsolutePosition
-            local tbSize = TitleBar.AbsoluteSize
-            if pos.X >= tbPos.X and pos.X <= tbPos.X + tbSize.X and
-               pos.Y >= tbPos.Y and pos.Y <= tbPos.Y + tbSize.Y then
-                dragging = true
-                dragOffset = pos - Vector2.new(MainFrame.AbsolutePosition.X, MainFrame.AbsolutePosition.Y)
-            end
-        end
-    end
-
-    local function onInputChanged(input)
-        if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
-            local pos = Vector2.new(input.Position.X, input.Position.Y)
-            local newPos = pos - dragOffset
-            MainFrame.Position = UDim2.new(0, newPos.X, 0, newPos.Y)
-        end
-    end
-
-    local function onInputEnded(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-            dragging = false
-        end
-    end
-
-    UserInputService.InputBegan:Connect(onInputBegan)
-    UserInputService.InputChanged:Connect(onInputChanged)
-    UserInputService.InputEnded:Connect(onInputEnded)
-
-    return ScreenGui
-end
-
-createUI()
+            local pos = Vector2.new(input
