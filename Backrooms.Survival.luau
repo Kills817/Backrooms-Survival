@@ -2,6 +2,7 @@
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
+local UserInputService = game:GetService("UserInputService")
 
 local LocalPlayer = Players.LocalPlayer
 
@@ -25,11 +26,10 @@ local function updateESP(player)
             hl.Parent = char
         end
         hl.FillTransparency = 0.5
-        hl.FillColor = Color3.fromRGB(128, 0, 255)
+        hl.FillColor = Color3.fromRGB(128, 0, 255)   -- 紫色
         hl.OutlineTransparency = 0
-        hl.OutlineColor = Color3.new(1, 1, 1)
-        hl.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
-        hl.DistanceMode = Enum.HighlightDistanceMode.AlwaysOnTop
+        hl.OutlineColor = Color3.new(1, 1, 1)       -- 白色描边
+        hl.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop  -- 无距离限制
         hl.Enabled = true
     else
         if hl then
@@ -74,7 +74,6 @@ end)
 
 -- UI 创建
 local function createUI()
-    -- 防止重复
     if LocalPlayer.PlayerGui:FindFirstChild("BackroomsSurvivalUI") then
         return
     end
@@ -311,25 +310,39 @@ local function createUI()
         end
     end)
 
-    -- 拖动（使用 TitleBar 自身事件）
+    -- 拖动（使用 UserInputService 兼容鼠标和触摸）
     local dragging = false
-    local offset = Vector2.new()
+    local dragOffset = Vector2.new()
 
-    TitleBar.MouseButton1Down:Connect(function(x, y)
-        dragging = true
-        offset = Vector2.new(x, y) - MainFrame.AbsolutePosition
-    end)
+    local function onInputBegan(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            local pos = input.Position
+            local tbPos = TitleBar.AbsolutePosition
+            local tbSize = TitleBar.AbsoluteSize
+            if pos.X >= tbPos.X and pos.X <= tbPos.X + tbSize.X and
+               pos.Y >= tbPos.Y and pos.Y <= tbPos.Y + tbSize.Y then
+                dragging = true
+                dragOffset = pos - MainFrame.AbsolutePosition
+            end
+        end
+    end
 
-    TitleBar.MouseMoved:Connect(function(x, y)
-        if dragging then
-            local newPos = Vector2.new(x, y) - offset
+    local function onInputChanged(input)
+        if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+            local newPos = input.Position - dragOffset
             MainFrame.Position = UDim2.new(0, newPos.X, 0, newPos.Y)
         end
-    end)
+    end
 
-    TitleBar.MouseButton1Up:Connect(function()
-        dragging = false
-    end)
+    local function onInputEnded(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            dragging = false
+        end
+    end
+
+    UserInputService.InputBegan:Connect(onInputBegan)
+    UserInputService.InputChanged:Connect(onInputChanged)
+    UserInputService.InputEnded:Connect(onInputEnded)
 
     return ScreenGui
 end
