@@ -43,6 +43,7 @@ end
 
 local function createTag(target)
     if target:FindFirstChild("ESPTag") then return end
+    
     local tag = Instance.new("Folder")
     tag.Name = "ESPTag"
     tag.Parent = target
@@ -58,8 +59,8 @@ local function createTag(target)
 
     local billboard = Instance.new("BillboardGui")
     billboard.Name = "Billboard"
-    billboard.Size = UDim2.new(0, 150, 0, 30)
-    billboard.StudsOffset = Vector3.new(0, 2.5, 0)
+    billboard.Size = UDim2.new(0, 200, 0, 40)
+    billboard.StudsOffset = Vector3.new(0, 3.5, 0)
     billboard.AlwaysOnTop = true
     billboard.Parent = tag
 
@@ -71,7 +72,7 @@ local function createTag(target)
     label.Font = Enum.Font.SourceSansBold
     label.TextSize = 14
     label.TextStrokeColor3 = Color3.new(0, 0, 0)
-    label.TextStrokeTransparency = 0.5
+    label.TextStrokeTransparency = 0.3
     label.TextWrapped = true
     label.TextXAlignment = Enum.TextXAlignment.Center
     label.TextYAlignment = Enum.TextYAlignment.Center
@@ -81,21 +82,45 @@ end
 local function updateTag(target)
     local tag = target:FindFirstChild("ESPTag")
     if not tag then return end
-    local label = tag:FindFirstChild("Billboard") and tag.Billboard:FindFirstChild("Label")
+    local billboard = tag:FindFirstChild("Billboard")
+    if not billboard then return end
+    local label = billboard:FindFirstChild("Label")
     if not label then return end
+    
     local rootPart = target:FindFirstChild("HumanoidRootPart") or target:FindFirstChild("Head")
     if not rootPart or not LocalPlayer.Character then
         label.Text = "Unknown"
         return
     end
-    local distance = (rootPart.Position - LocalPlayer.Character.PrimaryPart.Position).Magnitude
-    local name = Players:GetPlayerFromCharacter(target) and Players:GetPlayerFromCharacter(target).Name or target.Name
+    
+    local primaryPart = LocalPlayer.Character:FindFirstChild("HumanoidRootPart") or LocalPlayer.Character:FindFirstChild("Head")
+    if not primaryPart then
+        label.Text = "Unknown"
+        return
+    end
+    
+    local distance = (rootPart.Position - primaryPart.Position).Magnitude
+    local name = target.Name
+    
+    local player = Players:GetPlayerFromCharacter(target)
+    if player then
+        name = player.Name
+    end
+    
     label.Text = name .. " | " .. string.format("%.1f", distance) .. " studs"
 end
 
 local function removeTag(target)
     local tag = target:FindFirstChild("ESPTag")
     if tag then tag:Destroy() end
+end
+
+local function clearAllESP()
+    for _, target in pairs(Workspace:GetDescendants()) do
+        if target:IsA("Model") then
+            removeTag(target)
+        end
+    end
 end
 
 local function refreshTargets()
@@ -159,6 +184,7 @@ local function createUI()
     UICorner.CornerRadius = UDim.new(0, 8)
     UICorner.Parent = MainFrame
 
+    -- Title Bar
     local TitleBar = Instance.new("Frame")
     TitleBar.Name = "TitleBar"
     TitleBar.Size = UDim2.new(1, 0, 0, 50)
@@ -169,23 +195,25 @@ local function createUI()
     TitleBarCorner.CornerRadius = UDim.new(0, 8)
     TitleBarCorner.Parent = TitleBar
 
+    -- Main Title (changed)
     local Title = Instance.new("TextLabel")
     Title.Size = UDim2.new(1, -70, 0, 20)
     Title.Position = UDim2.new(0, 10, 0, 5)
     Title.BackgroundTransparency = 1
-    Title.Text = "Backrooms Survival"
+    Title.Text = "Backrooms Survival Explorer Script"
     Title.TextColor3 = Color3.new(1, 1, 1)
     Title.Font = Enum.Font.SourceSansBold
-    Title.TextSize = 20
+    Title.TextSize = 18
     Title.TextXAlignment = Enum.TextXAlignment.Left
     Title.TextYAlignment = Enum.TextYAlignment.Top
     Title.Parent = TitleBar
 
+    -- Subtitle (changed)
     local SubTitle = Instance.new("TextLabel")
     SubTitle.Size = UDim2.new(1, -70, 0, 15)
     SubTitle.Position = UDim2.new(0, 10, 0, 28)
     SubTitle.BackgroundTransparency = 1
-    SubTitle.Text = "Testing, made by F-197"
+    SubTitle.Text = "version : v0.1.3.2"
     SubTitle.TextColor3 = Color3.fromRGB(210, 210, 210)
     SubTitle.Font = Enum.Font.SourceSans
     SubTitle.TextSize = 12
@@ -193,6 +221,7 @@ local function createUI()
     SubTitle.TextYAlignment = Enum.TextYAlignment.Top
     SubTitle.Parent = TitleBar
 
+    -- Close Button
     local CloseButton = Instance.new("TextButton")
     CloseButton.Size = UDim2.new(0, 30, 0, 30)
     CloseButton.Position = UDim2.new(1, -35, 0, 10)
@@ -209,10 +238,11 @@ local function createUI()
             FullbrightEnabled = false
             applyFullbright(false)
         end
-        refreshTargets()
+        clearAllESP()
         ScreenGui:Destroy()
     end)
 
+    -- Minimize Button
     local MinButton = Instance.new("TextButton")
     MinButton.Size = UDim2.new(0, 30, 0, 30)
     MinButton.Position = UDim2.new(1, -70, 0, 10)
@@ -223,6 +253,7 @@ local function createUI()
     MinButton.TextSize = 22
     MinButton.Parent = TitleBar
 
+    -- Content Container
     local ContentContainer = Instance.new("Frame")
     ContentContainer.Name = "ContentContainer"
     ContentContainer.Size = UDim2.new(1, 0, 1, -50)
@@ -231,12 +262,14 @@ local function createUI()
     ContentContainer.ClipsDescendants = true
     ContentContainer.Parent = MainFrame
 
+    -- Left Panel (categories)
     local LeftPanel = Instance.new("Frame")
     LeftPanel.Size = UDim2.new(0, 120, 1, 0)
     LeftPanel.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
     LeftPanel.BorderSizePixel = 0
     LeftPanel.Parent = ContentContainer
 
+    -- Right Panel (content)
     local RightPanel = Instance.new("Frame")
     RightPanel.Size = UDim2.new(1, -120, 1, 0)
     RightPanel.Position = UDim2.new(0, 120, 0, 0)
@@ -244,19 +277,48 @@ local function createUI()
     RightPanel.BorderSizePixel = 0
     RightPanel.Parent = ContentContainer
 
-    local SettingsFrame = Instance.new("Frame")
-    SettingsFrame.Size = UDim2.new(1, 0, 1, 0)
-    SettingsFrame.BackgroundTransparency = 1
-    SettingsFrame.Visible = true
-    SettingsFrame.Parent = RightPanel
+    -- Scrolling frames for each category (with scrollbar)
+    local function createScrollingFrame(name)
+        local sc = Instance.new("ScrollingFrame")
+        sc.Name = name
+        sc.Size = UDim2.new(1, 0, 1, 0)
+        sc.BackgroundTransparency = 1
+        sc.ScrollBarThickness = 4
+        sc.ScrollBarImageColor3 = Color3.fromRGB(150, 150, 150)
+        sc.ScrollBarImageTransparency = 0.5
+        sc.CanvasSize = UDim2.new(0, 0, 0, 0)
+        sc.ClipsDescendants = true
+        sc.Parent = RightPanel
+        -- Container for content
+        local container = Instance.new("Frame")
+        container.Name = "Container"
+        container.Size = UDim2.new(1, -20, 0, 0)
+        container.Position = UDim2.new(0, 10, 0, 5)
+        container.BackgroundTransparency = 1
+        container.Parent = sc
+        local layout = Instance.new("UIListLayout")
+        layout.FillDirection = Enum.FillDirection.Vertical
+        layout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+        layout.VerticalAlignment = Enum.VerticalAlignment.Top
+        layout.Padding = UDim.new(0, 5)
+        layout.Parent = container
+        -- Update canvas size when layout changes
+        layout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+            sc.CanvasSize = UDim2.new(0, 0, 0, layout.AbsoluteContentSize.Y + 10)
+        end)
+        return sc, container, layout
+    end
 
-    local ESPFrame = Instance.new("Frame")
-    ESPFrame.Size = UDim2.new(1, 0, 1, 0)
-    ESPFrame.BackgroundTransparency = 1
-    ESPFrame.Visible = false
-    ESPFrame.Parent = RightPanel
+    local SettingsScroller, SettingsContainer, SettingsLayout = createScrollingFrame("SettingsScroller")
+    local ESPScroller, ESPContainer, ESPLayout = createScrollingFrame("ESPScroller")
 
-    local function createCategoryButton(text, targetFrame, yPos)
+    -- Initially hide both
+    SettingsScroller.Visible = false
+    ESPScroller.Visible = false
+
+    -- Category buttons with selection highlight
+    local selectedButton = nil
+    local function createCategoryButton(text, targetScroller, yPos)
         local btn = Instance.new("TextButton")
         btn.Size = UDim2.new(1, 0, 0, 35)
         btn.Position = UDim2.new(0, 0, 0, yPos)
@@ -267,35 +329,31 @@ local function createUI()
         btn.TextSize = 18
         btn.Parent = LeftPanel
         btn.MouseButton1Click:Connect(function()
-            SettingsFrame.Visible = (targetFrame == SettingsFrame)
-            ESPFrame.Visible = (targetFrame == ESPFrame)
+            -- Deselect previous
+            if selectedButton then
+                selectedButton.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+            end
+            -- Select current
+            btn.BackgroundColor3 = Color3.fromRGB(35, 35, 35) -- same as LeftPanel background
+            selectedButton = btn
+            
+            -- Show only the selected scroller
+            SettingsScroller.Visible = (targetScroller == SettingsScroller)
+            ESPScroller.Visible = (targetScroller == ESPScroller)
         end)
         return btn
     end
 
-    createCategoryButton("⚙️Settings⚙️", SettingsFrame, 0)
-    createCategoryButton("👁️ESP👁️", ESPFrame, 40)
+    createCategoryButton("⚙️Settings⚙️", SettingsScroller, 0)
+    createCategoryButton("👁️ESP👁️", ESPScroller, 40)
 
-    -- Settings内容
+    -- Build Settings content
     local function buildSettings()
-        local container = Instance.new("Frame")
-        container.Size = UDim2.new(1, -20, 1, -10)
-        container.Position = UDim2.new(0, 10, 0, 5)
-        container.BackgroundTransparency = 1
-        container.Parent = SettingsFrame
-
-        local layout = Instance.new("UIListLayout")
-        layout.FillDirection = Enum.FillDirection.Vertical
-        layout.HorizontalAlignment = Enum.HorizontalAlignment.Center
-        layout.VerticalAlignment = Enum.VerticalAlignment.Top
-        layout.Padding = UDim.new(0, 5)
-        layout.Parent = container
-
         local function createRow(labelText, initialState, callback)
             local row = Instance.new("Frame")
             row.Size = UDim2.new(1, 0, 0, 30)
             row.BackgroundTransparency = 1
-            row.Parent = container
+            row.Parent = SettingsContainer
 
             local label = Instance.new("TextLabel")
             label.Size = UDim2.new(0.7, -10, 1, 0)
@@ -364,26 +422,13 @@ local function createUI()
     end
     buildSettings()
 
-    -- ESP内容
+    -- Build ESP content
     local function buildESP()
-        local container = Instance.new("Frame")
-        container.Size = UDim2.new(1, -20, 1, -10)
-        container.Position = UDim2.new(0, 10, 0, 5)
-        container.BackgroundTransparency = 1
-        container.Parent = ESPFrame
-
-        local layout = Instance.new("UIListLayout")
-        layout.FillDirection = Enum.FillDirection.Vertical
-        layout.HorizontalAlignment = Enum.HorizontalAlignment.Center
-        layout.VerticalAlignment = Enum.VerticalAlignment.Top
-        layout.Padding = UDim.new(0, 5)
-        layout.Parent = container
-
         local function createRow(labelText, initialState, callback)
             local row = Instance.new("Frame")
             row.Size = UDim2.new(1, 0, 0, 30)
             row.BackgroundTransparency = 1
-            row.Parent = container
+            row.Parent = ESPContainer
 
             local label = Instance.new("TextLabel")
             label.Size = UDim2.new(0.7, -10, 1, 0)
@@ -457,6 +502,7 @@ local function createUI()
     end
     buildESP()
 
+    -- Minimize/Expand
     MinButton.MouseButton1Click:Connect(function()
         UIMinimized = not UIMinimized
         local targetSize = UIMinimized and UDim2.new(0, 400, 0, 50) or UDim2.new(0, 400, 0, 250)
@@ -472,6 +518,7 @@ local function createUI()
         end
     end)
 
+    -- Drag
     local dragging = false
     local dragOffset = Vector2.new()
 
