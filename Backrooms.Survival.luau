@@ -127,8 +127,8 @@ local function createTag(target, isPlayer)
 
     local billboard = Instance.new("BillboardGui")
     billboard.Name = "Billboard"
-    billboard.Size = UDim2.new(0, 200, 0, 50)
-    billboard.StudsOffset = Vector3.new(0, 5, 0)   -- 抬高
+    billboard.Size = UDim2.new(0, 300, 0, 30)
+    billboard.StudsOffset = Vector3.new(0, 5, 0)
     billboard.AlwaysOnTop = true
     billboard.Adornee = target
     billboard.Parent = tag
@@ -139,10 +139,10 @@ local function createTag(target, isPlayer)
     label.BackgroundTransparency = 1
     label.TextColor3 = Color3.new(1, 1, 1)
     label.Font = Enum.Font.SourceSansBold
-    label.TextSize = 20                    -- 字体加大
+    label.TextSize = 15
     label.TextStrokeColor3 = Color3.new(0, 0, 0)
     label.TextStrokeTransparency = 0.3
-    label.TextWrapped = true
+    label.TextWrapped = false
     label.TextXAlignment = Enum.TextXAlignment.Center
     label.TextYAlignment = Enum.TextYAlignment.Center
     label.Text = "Loading..."
@@ -188,7 +188,6 @@ local function updateTag(target)
         name = player.Name
     end
 
-    -- 读取生命值
     local humanoid = target:FindFirstChildOfClass("Humanoid")
     local hp = humanoid and math.floor(humanoid.Health) or "??"
     local hpText = (type(hp) == "number") and ("HP: " .. hp) or "HP: ??"
@@ -429,11 +428,12 @@ local function createUI()
     Title.TextYAlignment = Enum.TextYAlignment.Top
     Title.Parent = TitleBar
 
+    -- 版本号已更新
     local SubTitle = Instance.new("TextLabel")
     SubTitle.Size = UDim2.new(1, -70, 0, 15)
     SubTitle.Position = UDim2.new(0, 10, 0, 28)
     SubTitle.BackgroundTransparency = 1
-    SubTitle.Text = "version : v0.1.7.5"
+    SubTitle.Text = "version : v0.1.9.5"
     SubTitle.TextColor3 = Color3.fromRGB(210, 210, 210)
     SubTitle.Font = Enum.Font.SourceSans
     SubTitle.TextSize = 12
@@ -556,17 +556,31 @@ local function createUI()
     createCategoryButton("⚙️基础功能⚙️", SettingsScroller, 40)
     createCategoryButton("👁️透视👁️", ESPScroller, 80)
 
+    -- 更新内容分类：主标题 + 副标题 + 条目
     local function buildUpdateContent()
+        -- 主标题：更新公告
+        local mainTitle = Instance.new("TextLabel")
+        mainTitle.Size = UDim2.new(1, 0, 0, 30)
+        mainTitle.BackgroundTransparency = 1
+        mainTitle.Text = "更新公告"
+        mainTitle.TextColor3 = Color3.new(1, 1, 1)
+        mainTitle.Font = Enum.Font.SourceSansBold
+        mainTitle.TextSize = 20
+        mainTitle.TextXAlignment = Enum.TextXAlignment.Left
+        mainTitle.Parent = UpdateContainer
+
+        -- 副标题：版本号（灰色）
         local versionLabel = Instance.new("TextLabel")
-        versionLabel.Size = UDim2.new(1, 0, 0, 25)
+        versionLabel.Size = UDim2.new(1, 0, 0, 22)
         versionLabel.BackgroundTransparency = 1
-        versionLabel.Text = "V0.1.7.5"
+        versionLabel.Text = "V0.1.9.5"
         versionLabel.TextColor3 = Color3.fromRGB(160, 160, 160)
         versionLabel.Font = Enum.Font.SourceSansBold
         versionLabel.TextSize = 16
         versionLabel.TextXAlignment = Enum.TextXAlignment.Left
         versionLabel.Parent = UpdateContainer
 
+        -- 更新条目
         local items = {
             "▪ 该版本起，可查看更新内容。",
             "▪ 重构透视代码逻辑。",
