@@ -13,6 +13,9 @@ local FullbrightEnabled = false
 local UIMinimized = false
 local refreshPending = false
 
+-- 缓存当前激活的 ESP 目标列表
+local activeTagTargets = {}
+
 -- ===== Fullbright =====
 local function applyFullbright(enable)
     if enable then
@@ -50,7 +53,7 @@ local function isNPCModel(model)
     return false
 end
 
--- ===== ESP 标签 =====
+-- ===== ESP 标签创建 =====
 local function createTag(target)
     if target:FindFirstChild("ESPTag") then return end
     
@@ -90,6 +93,9 @@ local function createTag(target)
     label.TextYAlignment = Enum.TextYAlignment.Center
     label.Text = "Loading..."
     label.Parent = billboard
+
+    -- 加入缓存列表
+    table.insert(activeTagTargets, target)
 end
 
 local function updateTag(target)
@@ -107,13 +113,14 @@ local function updateTag(target)
     
     local rootPart = target:FindFirstChild("HumanoidRootPart") or target:FindFirstChild("Head")
     if not rootPart then
-        label.Text = "No Root"
+        -- 删除无效标签
+        removeTag(target)
         return
     end
     
     local primaryPart = LocalPlayer.Character:FindFirstChild("HumanoidRootPart") or LocalPlayer.Character:FindFirstChild("Head")
     if not primaryPart then
-        label.Text = "No Root"
+        label.Text = "Waiting..."
         return
     end
     
@@ -129,35 +136,23 @@ end
 
 local function removeTag(target)
     local tag = target:FindFirstChild("ESPTag")
-    if tag then tag:Destroy() end
+    if tag then
+        -- 从缓存中移除
+        for i, t in ipairs(activeTagTargets) do
+            if t == target then
+                table.remove(activeTagTargets, i)
+                break
+            end
+        end
+        tag:Destroy()
+    end
 end
 
 local function clearAllESP()
-    for _, target in pairs(Workspace:GetDescendants()) do
-        if target:IsA("Model") then
-            removeTag(target)
-        end
+    for _, target in pairs(activeTagTargets) do
+        removeTag(target)
     end
-end
-
-local function cleanInvalidTags()
-    for _, target in pairs(Workspace:GetDescendants()) do
-        if target:IsA("Model") then
-            local tag = target:FindFirstChild("ESPTag")
-            if tag then
-                local billboard = tag:FindFirstChild("Billboard")
-                if billboard then
-                    local label = billboard:FindFirstChild("Label")
-                    if label then
-                        local text = label.Text
-                        if text == "Label" or text == "Unknown" or text == "Loading..." or text == "No Root" or text == "Waiting..." then
-                            removeTag(target)
-                        end
-                    end
-                end
-            end
-        end
-    end
+    activeTagTargets = {}
 end
 
 local function refreshTargets()
@@ -165,7 +160,9 @@ local function refreshTargets()
     refreshPending = true
     task.delay(0.1, function()
         refreshPending = false
-        cleanInvalidTags()
+        -- 先清理所有现有标签（因为开关状态可能变化）
+        clearAllESP()
+        
         for _, target in pairs(Workspace:GetDescendants()) do
             if target:IsA("Model") and target:FindFirstChildOfClass("Humanoid") then
                 local isPlayer = Players:GetPlayerFromCharacter(target)
@@ -173,15 +170,11 @@ local function refreshTargets()
                     if PlayerESPEnabled and target ~= LocalPlayer.Character then
                         createTag(target)
                         updateTag(target)
-                    else
-                        removeTag(target)
                     end
                 elseif isNPCModel(target) then
                     if NPCESPEnabled then
                         createTag(target)
                         updateTag(target)
-                    else
-                        removeTag(target)
                     end
                 end
             end
@@ -189,17 +182,33 @@ local function refreshTargets()
     end)
 end
 
--- 实时更新：每帧更新已有标签的距离
+-- 实时更新：每 2 帧更新一次已有标签的距离
+local frameCounter = 0
 RunService.Heartbeat:Connect(function()
+    frameCounter = frameCounter + 1
+    if frameCounter % 2 ~= 0 then return end  -- 每2帧执行一次
     if not PlayerESPEnabled and not NPCESPEnabled then
+        -- 如果所有ESP关闭，清空缓存并移除所有标签
+        if #activeTagTargets > 0 then
+            clearAllESP()
+        end
         return
     end
-    for _, target in pairs(Workspace:GetDescendants()) do
-        if target:IsA("Model") then
-            local tag = target:FindFirstChild("ESPTag")
-            if tag then
-                updateTag(target)
-            end
+    -- 只更新缓存中的目标
+    local toRemove = {}
+    for i, target in ipairs(activeTagTargets) do
+        if target and target:IsA("Model") and target:FindFirstChild("ESPTag") then
+            updateTag(target)
+        else
+            -- 无效目标，标记移除
+            table.insert(toRemove, i)
+        end
+    end
+    -- 从后往前移除无效目标
+    for i = #toRemove, 1, -1 do
+        local idx = toRemove[i]
+        if activeTagTargets[idx] then
+            removeTag(activeTagTargets[idx])
         end
     end
 end)
@@ -216,7 +225,7 @@ for _, player in pairs(Players:GetPlayers()) do
 end
 Players.PlayerAdded:Connect(onCharacterAdded)
 
--- ===== UI 创建 =====
+-- ===== UI 创建（与之前相同） =====
 local function createUI()
     if LocalPlayer.PlayerGui:FindFirstChild("BackroomsSurvivalUI") then return end
 
