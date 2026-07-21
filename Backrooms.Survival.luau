@@ -13,6 +13,11 @@ local NPCESPEnabled = false
 local FullbrightEnabled = false
 local UIMinimized = false
 
+-- ===== 标签管理（分离类型） =====
+local playerTags = {}  -- target -> tag folder
+local npcTags = {}     -- target -> tag folder
+local tagCreationTime = {}  -- target -> creation time (unified)
+
 -- ===== Fullbright =====
 local function applyFullbright(enable)
     if enable then
@@ -50,10 +55,12 @@ local function isNPCModel(model)
     return false
 end
 
--- ===== ESP 核心 =====
-local activeTags = {}  -- 存储 { target = tagFolder }
-local function createTag(target)
-    if activeTags[target] then return end
+-- ===== 标签创建/更新/删除 =====
+local function createTag(target, isPlayer)
+    -- 检查是否已存在
+    local tagDict = isPlayer and playerTags or npcTags
+    if tagDict[target] then return end
+
     local tag = Instance.new("Folder")
     tag.Name = "ESPTag"
     tag.Parent = target
@@ -91,35 +98,47 @@ local function createTag(target)
     label.Text = "Loading..."
     label.Parent = billboard
 
-    activeTags[target] = tag
+    tagDict[target] = tag
+    tagCreationTime[target] = tick()
 end
 
 local function updateTag(target)
-    local tag = activeTags[target]
+    local tag = playerTags[target] or npcTags[target]
     if not tag then return end
     local billboard = tag:FindFirstChild("Billboard")
     if not billboard then return end
     local label = billboard:FindFirstChild("Label")
     if not label then return end
 
+    -- 如果玩家角色不存在，保持 Loading...
     if not LocalPlayer.Character then
-        label.Text = "等待角色..."
+        label.Text = "Loading..."
         return
     end
 
+    -- 获取目标的 RootPart
     local rootPart = target:FindFirstChild("HumanoidRootPart") or target:FindFirstChild("Head")
     if not rootPart then
-        label.Text = "无Root"
+        -- 无法获取位置，删除标签
+        removeTag(target)
         return
     end
 
     local primaryPart = LocalPlayer.Character:FindFirstChild("HumanoidRootPart") or LocalPlayer.Character:FindFirstChild("Head")
     if not primaryPart then
-        label.Text = "等待角色..."
+        label.Text = "Loading..."
         return
     end
 
+    -- 计算距离
     local distance = (rootPart.Position - primaryPart.Position).Magnitude
+    -- 如果距离异常（NaN 或 Inf），删除标签
+    if distance ~= distance or distance == math.huge then
+        removeTag(target)
+        return
+    end
+
+    -- 获取名称
     local name = target.Name
     local player = Players:GetPlayerFromCharacter(target)
     if player then
@@ -130,83 +149,137 @@ local function updateTag(target)
 end
 
 local function removeTag(target)
-    local tag = activeTags[target]
+    local tag = playerTags[target]
     if tag then
         tag:Destroy()
-        activeTags[target] = nil
+        playerTags[target] = nil
+        tagCreationTime[target] = nil
+        return
+    end
+    tag = npcTags[target]
+    if tag then
+        tag:Destroy()
+        npcTags[target] = nil
+        tagCreationTime[target] = nil
     end
 end
 
 local function clearAllESP()
-    for target, tag in pairs(activeTags) do
+    for target, tag in pairs(playerTags) do
         tag:Destroy()
     end
-    activeTags = {}
+    for target, tag in pairs(npcTags) do
+        tag:Destroy()
+    end
+    playerTags = {}
+    npcTags = {}
+    tagCreationTime = {}
 end
 
--- ===== 扫描并更新所有目标 =====
-local function refreshTargets()
-    -- 先清理所有现有标签（因为开关状态可能变化）
-    clearAllESP()
-
-    for _, target in pairs(Workspace:GetDescendants()) do
-        if target:IsA("Model") and target:FindFirstChildOfClass("Humanoid") then
-            local isPlayer = Players:GetPlayerFromCharacter(target)
-            if isPlayer then
-                if PlayerESPEnabled and target ~= LocalPlayer.Character then
-                    createTag(target)
-                    updateTag(target)
-                end
-            elseif isNPCModel(target) then
-                if NPCESPEnabled then
-                    createTag(target)
+-- ===== 增量更新玩家/NPC ESP =====
+local function updatePlayerESP()
+    if PlayerESPEnabled then
+        -- 添加所有玩家（除自己）
+        for _, target in pairs(Workspace:GetDescendants()) do
+            if target:IsA("Model") and target:FindFirstChildOfClass("Humanoid") then
+                local isPlayer = Players:GetPlayerFromCharacter(target)
+                if isPlayer and target ~= LocalPlayer.Character and not playerTags[target] then
+                    createTag(target, true)
                     updateTag(target)
                 end
             end
         end
+    else
+        -- 移除所有玩家标签
+        for target, tag in pairs(playerTags) do
+            tag:Destroy()
+        end
+        playerTags = {}
     end
 end
 
--- ===== 实时更新距离（每2帧） =====
+local function updateNPCESP()
+    if NPCESPEnabled then
+        -- 添加所有 NPC
+        for _, target in pairs(Workspace:GetDescendants()) do
+            if target:IsA("Model") and target:FindFirstChildOfClass("Humanoid") then
+                if isNPCModel(target) and not npcTags[target] then
+                    createTag(target, false)
+                    updateTag(target)
+                end
+            end
+        end
+    else
+        -- 移除所有 NPC 标签
+        for target, tag in pairs(npcTags) do
+            tag:Destroy()
+        end
+        npcTags = {}
+    end
+end
+
+-- ===== 实时更新循环 =====
 local frameCounter = 0
 RunService.Heartbeat:Connect(function()
     frameCounter = frameCounter + 1
     if frameCounter % 2 ~= 0 then return end
 
-    if not PlayerESPEnabled and not NPCESPEnabled then
-        if next(activeTags) then
-            clearAllESP()
-        end
-        return
-    end
+    local now = tick()
+    local toRemove = {}
 
-    -- 更新已有标签的距离
-    for target, tag in pairs(activeTags) do
+    -- 更新玩家标签
+    for target, tag in pairs(playerTags) do
         if target and target:IsA("Model") and target:FindFirstChild("ESPTag") then
             updateTag(target)
+            -- 检查无效文本
+            local label = tag:FindFirstChild("Billboard") and tag.Billboard:FindFirstChild("Label")
+            if label then
+                local text = label.Text
+                -- 如果文本是 "Label" 或 "Loading..." 超时，标记删除
+                if text == "Label" or (text == "Loading..." and tagCreationTime[target] and now - tagCreationTime[target] > 3) then
+                    table.insert(toRemove, target)
+                end
+            end
         else
-            removeTag(target)
+            table.insert(toRemove, target)
         end
     end
 
-    -- 检查是否有新目标（玩家重生或新NPC出现），简单扫描一次（每2帧扫描，开销可接受）
-    -- 但为了避免遗漏，我们每10帧做一次完全刷新（保证新目标被捕捉）
+    -- 更新 NPC 标签
+    for target, tag in pairs(npcTags) do
+        if target and target:IsA("Model") and target:FindFirstChild("ESPTag") then
+            updateTag(target)
+            local label = tag:FindFirstChild("Billboard") and tag.Billboard:FindFirstChild("Label")
+            if label then
+                local text = label.Text
+                if text == "Label" or (text == "Loading..." and tagCreationTime[target] and now - tagCreationTime[target] > 3) then
+                    table.insert(toRemove, target)
+                end
+            end
+        else
+            table.insert(toRemove, target)
+        end
+    end
+
+    -- 移除无效目标
+    for _, target in ipairs(toRemove) do
+        removeTag(target)
+    end
+
+    -- 每10帧扫描新目标
     if frameCounter % 10 == 0 then
-        -- 快速检查是否需要新增标签（不清理现有）
         for _, target in pairs(Workspace:GetDescendants()) do
             if target:IsA("Model") and target:FindFirstChildOfClass("Humanoid") then
-                if not activeTags[target] then
-                    local isPlayer = Players:GetPlayerFromCharacter(target)
-                    if isPlayer then
-                        if PlayerESPEnabled and target ~= LocalPlayer.Character then
-                            createTag(target)
-                            updateTag(target)
-                        end
-                    elseif isNPCModel(target) then
-                        if NPCESPEnabled then
-                            createTag(target)
-                            updateTag(target)
-                        end
+                local isPlayer = Players:GetPlayerFromCharacter(target)
+                if isPlayer then
+                    if PlayerESPEnabled and target ~= LocalPlayer.Character and not playerTags[target] then
+                        createTag(target, true)
+                        updateTag(target)
+                    end
+                elseif isNPCModel(target) then
+                    if NPCESPEnabled and not npcTags[target] then
+                        createTag(target, false)
+                        updateTag(target)
                     end
                 end
             end
@@ -218,7 +291,13 @@ end)
 local function onCharacterAdded(player)
     player.CharacterAdded:Connect(function()
         task.wait(0.5)
-        refreshTargets()
+        -- 新角色出现时，根据当前开关状态更新
+        if PlayerESPEnabled then
+            updatePlayerESP()
+        end
+        if NPCESPEnabled then
+            updateNPCESP()
+        end
     end)
 end
 
@@ -227,7 +306,7 @@ for _, player in pairs(Players:GetPlayers()) do
 end
 Players.PlayerAdded:Connect(onCharacterAdded)
 
--- ===== UI 创建 =====
+-- ===== UI 创建（与之前相同，但更新回调） =====
 local function createUI()
     if LocalPlayer.PlayerGui:FindFirstChild("BackroomsSurvivalUI") then return end
 
@@ -295,12 +374,11 @@ local function createUI()
     CloseButton.TextSize = 18
     CloseButton.Parent = TitleBar
     CloseButton.MouseButton1Click:Connect(function()
+        -- 关闭所有功能
         PlayerESPEnabled = false
         NPCESPEnabled = false
-        if FullbrightEnabled then
-            FullbrightEnabled = false
-            applyFullbright(false)
-        end
+        FullbrightEnabled = false
+        applyFullbright(false)
         clearAllESP()
         ScreenGui:Destroy()
     end)
@@ -379,7 +457,7 @@ local function createUI()
     SettingsScroller.Visible = false
     ESPScroller.Visible = false
 
-    -- 左侧分类按钮（翻译后）
+    -- 左侧分类按钮
     local selectedButton = nil
     local function createCategoryButton(text, targetScroller, yPos)
         local btn = Instance.new("TextButton")
@@ -405,16 +483,16 @@ local function createUI()
     end
 
     createCategoryButton("🔍更新内容🔍", UpdateScroller, 0)
-    createCategoryButton("⚙️常规", SettingsScroller, 40)
-    createCategoryButton("👁️透视", ESPScroller, 80)
+    createCategoryButton("⚙️基础功能⚙️", SettingsScroller, 40)
+    createCategoryButton("👁️透视👁️", ESPScroller, 80)
 
-    -- ===== 更新内容分类 =====
+    -- ===== 更新内容 =====
     local function buildUpdateContent()
         local versionLabel = Instance.new("TextLabel")
         versionLabel.Size = UDim2.new(1, 0, 0, 25)
         versionLabel.BackgroundTransparency = 1
         versionLabel.Text = "V0.1.6.0"
-        versionLabel.TextColor3 = Color3.fromRGB(160, 160, 160) -- 灰色
+        versionLabel.TextColor3 = Color3.fromRGB(160, 160, 160)
         versionLabel.Font = Enum.Font.SourceSansBold
         versionLabel.TextSize = 16
         versionLabel.TextXAlignment = Enum.TextXAlignment.Left
@@ -439,7 +517,7 @@ local function createUI()
     end
     buildUpdateContent()
 
-    -- ===== 常规分类 =====
+    -- ===== 基础功能 =====
     local function buildSettings()
         local function createRow(labelText, initialState, callback)
             local row = Instance.new("Frame")
@@ -514,7 +592,7 @@ local function createUI()
     end
     buildSettings()
 
-    -- ===== 透视分类 =====
+    -- ===== 透视 =====
     local function buildESP()
         local function createRow(labelText, initialState, callback)
             local row = Instance.new("Frame")
@@ -584,12 +662,28 @@ local function createUI()
 
         createRow("玩家ESP", PlayerESPEnabled, function(value)
             PlayerESPEnabled = value
-            refreshTargets()
+            if value then
+                updatePlayerESP()
+            else
+                -- 移除所有玩家标签
+                for target, tag in pairs(playerTags) do
+                    tag:Destroy()
+                end
+                playerTags = {}
+            end
         end)
 
         createRow("NPCs ESP", NPCESPEnabled, function(value)
             NPCESPEnabled = value
-            refreshTargets()
+            if value then
+                updateNPCESP()
+            else
+                -- 移除所有 NPC 标签
+                for target, tag in pairs(npcTags) do
+                    tag:Destroy()
+                end
+                npcTags = {}
+            end
         end)
     end
     buildESP()
