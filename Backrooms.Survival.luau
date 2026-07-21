@@ -2,7 +2,6 @@
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
-local UserInputService = game:GetService("UserInputService")
 
 local LocalPlayer = Players.LocalPlayer
 
@@ -72,7 +71,7 @@ end)
 
 -- UI Creation
 local function createUI()
-    -- Prevent duplicate UI
+    -- Prevent duplicate
     if LocalPlayer.PlayerGui:FindFirstChild("BackroomsSurvivalUI") then
         return
     end
@@ -95,11 +94,12 @@ local function createUI()
     UICorner.CornerRadius = UDim.new(0, 8)
     UICorner.Parent = MainFrame
 
-    -- Title Bar
+    -- Title Bar (draggable)
     local TitleBar = Instance.new("Frame")
     TitleBar.Name = "TitleBar"
     TitleBar.Size = UDim2.new(1, 0, 0, 50)
     TitleBar.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+    TitleBar.Active = true   -- essential for input
     TitleBar.Parent = MainFrame
 
     local TitleBarCorner = Instance.new("UICorner")
@@ -142,7 +142,7 @@ local function createUI()
     CloseButton.Font = Enum.Font.SourceSansBold
     CloseButton.TextSize = 18
     CloseButton.Parent = TitleBar
-    CloseButton.Activated:Connect(function()
+    CloseButton.MouseButton1Click:Connect(function()
         ESPEnabled = false
         rescanAll()
         ScreenGui:Destroy()
@@ -193,11 +193,11 @@ local function createUI()
     ESPButton.Font = Enum.Font.SourceSans
     ESPButton.TextSize = 18
     ESPButton.Parent = LeftPanel
-    ESPButton.Activated:Connect(function()
+    ESPButton.MouseButton1Click:Connect(function()
         ESPFrame.Visible = true
     end)
 
-    -- ESP Frame (content area)
+    -- ESP Frame
     local ESPFrame = Instance.new("Frame")
     ESPFrame.Size = UDim2.new(1, 0, 1, 0)
     ESPFrame.BackgroundTransparency = 1
@@ -217,7 +217,7 @@ local function createUI()
     ListLayout.Padding = UDim.new(0, 5)
     ListLayout.Parent = ListContainer
 
-    -- Helper: create toggle row
+    -- Helper: create a toggle row
     local function createFeatureRow(labelText, initialState, onToggle)
         local row = Instance.new("Frame")
         row.Size = UDim2.new(1, 0, 0, 30)
@@ -279,7 +279,7 @@ local function createUI()
 
         updateVisual(initialState)
 
-        toggleBtn.Activated:Connect(function()
+        toggleBtn.MouseButton1Click:Connect(function()
             currentState = not currentState
             onToggle(currentState)
             updateVisual(currentState)
@@ -292,10 +292,11 @@ local function createUI()
     createFeatureRow("Player ESP", ESPEnabled, function(state)
         ESPEnabled = state
         rescanAll()
+        print("ESP toggled to:", state)  -- 调试输出，可删除
     end)
 
     -- Minimize/Expand
-    ToggleUIButton.Activated:Connect(function()
+    ToggleUIButton.MouseButton1Click:Connect(function()
         UIMinimized = not UIMinimized
         local goalSize = UIMinimized and UDim2.new(0, 400, 0, 50) or UDim2.new(0, 400, 0, 250)
         local tween = TweenService:Create(MainFrame, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Size = goalSize })
@@ -311,29 +312,27 @@ local function createUI()
         end
     end)
 
-    -- Drag (TitleBar only, both mouse & touch)
-    local dragging = false
+    -- Drag logic using TitleBar's own input events (兼容鼠标和触摸)
+    local dragActive = false
+    local dragStart = nil
     local dragOffset = Vector2.new()
 
-    TitleBar.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-            dragging = true
-            dragOffset = input.Position - MainFrame.AbsolutePosition
-        end
+    TitleBar.MouseButton1Down:Connect(function(x, y)
+        dragActive = true
+        dragStart = Vector2.new(x, y)
+        dragOffset = dragStart - MainFrame.AbsolutePosition
     end)
 
-    TitleBar.InputChanged:Connect(function(input)
-        if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
-            local newPos = input.Position - dragOffset
+    TitleBar.MouseMoved:Connect(function(x, y)
+        if dragActive then
+            local newPos = Vector2.new(x, y) - dragOffset
             MainFrame.Position = UDim2.new(0, newPos.X, 0, newPos.Y)
         end
     end)
 
-    TitleBar.InputEnded:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-            dragging = false
-        end
-    end)
+    TitleBar.MouseButton1Up:Connect(function()
+        dragActive = false
+    end
 
     return ScreenGui, MainFrame
 end
