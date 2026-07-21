@@ -7,6 +7,7 @@ local RunService = game:GetService("RunService")
 
 local LocalPlayer = Players.LocalPlayer
 
+-- ===== 状态变量 =====
 local PlayerESPEnabled = false
 local NPCESPEnabled = false
 local FullbrightEnabled = false
@@ -18,8 +19,9 @@ local ESPFillColor = Color3.fromRGB(128, 0, 255)
 local ESPOutlineEnabled = true
 
 local activeNotifications = {}
-local notificationCount = 0
+local notifCounter = 0
 
+-- ===== Fullbright =====
 local function applyFullbright(enable)
     if enable then
         Lighting.Brightness = 2
@@ -37,12 +39,11 @@ local function applyFullbright(enable)
 end
 
 Lighting.LightingChanged:Connect(function()
-    if FullbrightEnabled then
-        applyFullbright(true)
-    end
+    if FullbrightEnabled then applyFullbright(true) end
 end)
 
-local noclipConnection = nil
+-- ===== Noclip =====
+local noclipConnection
 local function toggleNoclip(enable)
     NoclipEnabled = enable
     local char = LocalPlayer.Character
@@ -56,9 +57,7 @@ local function toggleNoclip(enable)
                 return
             end
             for _, v in pairs(LocalPlayer.Character:GetDescendants()) do
-                if v:IsA("BasePart") then
-                    v.CanCollide = false
-                end
+                if v:IsA("BasePart") then v.CanCollide = false end
             end
         end)
     else
@@ -67,9 +66,7 @@ local function toggleNoclip(enable)
             noclipConnection = nil
         end
         for _, v in pairs(char:GetDescendants()) do
-            if v:IsA("BasePart") then
-                v.CanCollide = true
-            end
+            if v:IsA("BasePart") then v.CanCollide = true end
         end
     end
 end
@@ -81,6 +78,7 @@ LocalPlayer.CharacterAdded:Connect(function(char)
     end
 end)
 
+-- ===== NPC 识别 =====
 local NPCsFolder = Workspace:FindFirstChild("NPCs")
 local function isNPCModel(model)
     if not model or not model:IsA("Model") then return false end
@@ -94,6 +92,7 @@ local function isNPCModel(model)
     return false
 end
 
+-- ===== ESP 标签管理 =====
 local playerTags = {}
 local npcTags = {}
 local tagCreationTime = {}
@@ -115,30 +114,30 @@ local function removeTag(target)
 end
 
 local function createTag(target, isPlayer)
-    local tagDict = isPlayer and playerTags or npcTags
-    if tagDict[target] then return end
+    local dict = isPlayer and playerTags or npcTags
+    if dict[target] then return end
 
     local tag = Instance.new("Folder")
     tag.Name = "ESPTag"
     tag.Parent = target
 
-    local highlight = Instance.new("Highlight")
-    highlight.Name = "Highlight"
-    highlight.Adornee = target
-    highlight.FillTransparency = 0.5
-    highlight.FillColor = ESPFillColor
-    highlight.OutlineTransparency = ESPOutlineEnabled and 0 or 1
-    highlight.OutlineColor = ESPOutlineColor
-    highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
-    highlight.Parent = tag
+    local hl = Instance.new("Highlight")
+    hl.Name = "Highlight"
+    hl.Adornee = target
+    hl.FillTransparency = 0.5
+    hl.FillColor = ESPFillColor
+    hl.OutlineTransparency = ESPOutlineEnabled and 0 or 1
+    hl.OutlineColor = ESPOutlineColor
+    hl.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+    hl.Parent = tag
 
-    local billboard = Instance.new("BillboardGui")
-    billboard.Name = "Billboard"
-    billboard.Size = UDim2.new(0, 300, 0, 30)
-    billboard.StudsOffset = Vector3.new(0, 5, 0)
-    billboard.AlwaysOnTop = true
-    billboard.Adornee = target
-    billboard.Parent = tag
+    local bill = Instance.new("BillboardGui")
+    bill.Name = "Billboard"
+    bill.Size = UDim2.new(0, 300, 0, 30)
+    bill.StudsOffset = Vector3.new(0, 5, 0)
+    bill.AlwaysOnTop = true
+    bill.Adornee = target
+    bill.Parent = tag
 
     local label = Instance.new("TextLabel")
     label.Name = "Label"
@@ -153,18 +152,18 @@ local function createTag(target, isPlayer)
     label.TextXAlignment = Enum.TextXAlignment.Center
     label.TextYAlignment = Enum.TextYAlignment.Center
     label.Text = "Loading..."
-    label.Parent = billboard
+    label.Parent = bill
 
-    tagDict[target] = tag
+    dict[target] = tag
     tagCreationTime[target] = tick()
 end
 
 local function updateTag(target)
     local tag = playerTags[target] or npcTags[target]
     if not tag then return end
-    local billboard = tag:FindFirstChild("Billboard")
-    if not billboard then return end
-    local label = billboard:FindFirstChild("Label")
+    local bill = tag:FindFirstChild("Billboard")
+    if not bill then return end
+    local label = bill:FindFirstChild("Label")
     if not label then return end
 
     if not LocalPlayer.Character then
@@ -172,50 +171,44 @@ local function updateTag(target)
         return
     end
 
-    local rootPart = target:FindFirstChild("HumanoidRootPart") or target:FindFirstChild("Head")
-    if not rootPart then
+    local root = target:FindFirstChild("HumanoidRootPart") or target:FindFirstChild("Head")
+    if not root then
         removeTag(target)
         return
     end
-
-    local primaryPart = LocalPlayer.Character:FindFirstChild("HumanoidRootPart") or LocalPlayer.Character:FindFirstChild("Head")
-    if not primaryPart then
+    local pp = LocalPlayer.Character:FindFirstChild("HumanoidRootPart") or LocalPlayer.Character:FindFirstChild("Head")
+    if not pp then
         label.Text = "Loading..."
         return
     end
 
-    local distance = (rootPart.Position - primaryPart.Position).Magnitude
-    if distance ~= distance or distance == math.huge then
+    local dist = (root.Position - pp.Position).Magnitude
+    if dist ~= dist or dist == math.huge then
         removeTag(target)
         return
     end
 
     local name = target.Name
     local player = Players:GetPlayerFromCharacter(target)
-    if player then
-        name = player.Name
-    end
+    if player then name = player.Name end
 
-    local humanoid = target:FindFirstChildOfClass("Humanoid")
-    local hp = humanoid and math.floor(humanoid.Health) or "??"
+    local hum = target:FindFirstChildOfClass("Humanoid")
+    local hp = hum and math.floor(hum.Health) or "??"
     local hpText = (type(hp) == "number") and ("HP: " .. hp) or "HP: ??"
 
-    label.Text = name .. " | " .. string.format("%.1f", distance) .. " m | " .. hpText
+    label.Text = name .. " | " .. string.format("%.1f", dist) .. " m | " .. hpText
 end
 
 local function clearAllESP()
-    for target, tag in pairs(playerTags) do
-        tag:Destroy()
-    end
-    for target, tag in pairs(npcTags) do
-        tag:Destroy()
-    end
+    for _, tag in pairs(playerTags) do tag:Destroy() end
+    for _, tag in pairs(npcTags) do tag:Destroy() end
     playerTags = {}
     npcTags = {}
     tagCreationTime = {}
 end
 
-local function updatePlayerESP()
+local function updateAllESP()
+    -- 玩家
     if PlayerESPEnabled then
         for _, target in pairs(Workspace:GetDescendants()) do
             if target:IsA("Model") and target:FindFirstChildOfClass("Humanoid") then
@@ -236,14 +229,11 @@ local function updatePlayerESP()
             end
         end
     else
-        for target, tag in pairs(playerTags) do
-            tag:Destroy()
-        end
+        for target, tag in pairs(playerTags) do tag:Destroy() end
         playerTags = {}
     end
-end
 
-local function updateNPCESP()
+    -- NPC
     if NPCESPEnabled then
         for _, target in pairs(Workspace:GetDescendants()) do
             if target:IsA("Model") and target:FindFirstChildOfClass("Humanoid") then
@@ -263,91 +253,83 @@ local function updateNPCESP()
             end
         end
     else
-        for target, tag in pairs(npcTags) do
-            tag:Destroy()
-        end
+        for target, tag in pairs(npcTags) do tag:Destroy() end
         npcTags = {}
     end
 end
-local function updateAllESP()
-    if PlayerESPEnabled then updatePlayerESP() end
-    if NPCESPEnabled then updateNPCESP() end
-end
 
-local frameCounter = 0
+-- 实时更新循环
+local frame = 0
 RunService.Heartbeat:Connect(function()
-    frameCounter = frameCounter + 1
+    frame = frame + 1
+    if frame % 5 ~= 0 then return end
 
-    if frameCounter % 5 == 0 then
-        local now = tick()
-        local toRemove = {}
+    local now = tick()
+    local toRemove = {}
 
-        for target, tag in pairs(playerTags) do
-            if target and target:IsA("Model") and target:FindFirstChild("ESPTag") then
-                local rootPart = target:FindFirstChild("HumanoidRootPart") or target:FindFirstChild("Head")
-                local valid = false
-                if rootPart and LocalPlayer.Character then
-                    local pp = LocalPlayer.Character:FindFirstChild("HumanoidRootPart") or LocalPlayer.Character:FindFirstChild("Head")
-                    if pp then
-                        local dist = (rootPart.Position - pp.Position).Magnitude
-                        if dist <= 500 then
-                            valid = true
-                            updateTag(target)
-                        end
+    for target, tag in pairs(playerTags) do
+        if target and target:IsA("Model") and target:FindFirstChild("ESPTag") then
+            local root = target:FindFirstChild("HumanoidRootPart") or target:FindFirstChild("Head")
+            local valid = false
+            if root and LocalPlayer.Character then
+                local pp = LocalPlayer.Character:FindFirstChild("HumanoidRootPart") or LocalPlayer.Character:FindFirstChild("Head")
+                if pp then
+                    local dist = (root.Position - pp.Position).Magnitude
+                    if dist <= 500 then
+                        valid = true
+                        updateTag(target)
                     end
                 end
-                if not valid then
-                    table.insert(toRemove, target)
-                else
-                    local label = tag:FindFirstChild("Billboard") and tag.Billboard:FindFirstChild("Label")
-                    if label then
-                        local text = label.Text
-                        if text == "Label" or (text == "Loading..." and tagCreationTime[target] and now - tagCreationTime[target] > 3) then
-                            table.insert(toRemove, target)
-                        end
-                    end
-                end
-            else
-                table.insert(toRemove, target)
             end
-        end
-
-        for target, tag in pairs(npcTags) do
-            if target and target:IsA("Model") and target:FindFirstChild("ESPTag") then
-                local rootPart = target:FindFirstChild("HumanoidRootPart") or target:FindFirstChild("Head")
-                local valid = false
-                if rootPart and LocalPlayer.Character then
-                    local pp = LocalPlayer.Character:FindFirstChild("HumanoidRootPart") or LocalPlayer.Character:FindFirstChild("Head")
-                    if pp then
-                        local dist = (rootPart.Position - pp.Position).Magnitude
-                        if dist <= 500 then
-                            valid = true
-                            updateTag(target)
-                        end
-                    end
-                end
-                if not valid then
-                    table.insert(toRemove, target)
-                else
-                    local label = tag:FindFirstChild("Billboard") and tag.Billboard:FindFirstChild("Label")
-                    if label then
-                        local text = label.Text
-                        if text == "Label" or (text == "Loading..." and tagCreationTime[target] and now - tagCreationTime[target] > 3) then
-                            table.insert(toRemove, target)
-                        end
-                    end
-                end
-            else
+            if not valid then
                 table.insert(toRemove, target)
+            else
+                local label = tag:FindFirstChild("Billboard") and tag.Billboard:FindFirstChild("Label")
+                if label then
+                    local text = label.Text
+                    if text == "Label" or (text == "Loading..." and tagCreationTime[target] and now - tagCreationTime[target] > 3) then
+                        table.insert(toRemove, target)
+                    end
+                end
             end
-        end
-
-        for _, target in ipairs(toRemove) do
-            removeTag(target)
+        else
+            table.insert(toRemove, target)
         end
     end
 
-    if frameCounter % 20 == 0 then
+    for target, tag in pairs(npcTags) do
+        if target and target:IsA("Model") and target:FindFirstChild("ESPTag") then
+            local root = target:FindFirstChild("HumanoidRootPart") or target:FindFirstChild("Head")
+            local valid = false
+            if root and LocalPlayer.Character then
+                local pp = LocalPlayer.Character:FindFirstChild("HumanoidRootPart") or LocalPlayer.Character:FindFirstChild("Head")
+                if pp then
+                    local dist = (root.Position - pp.Position).Magnitude
+                    if dist <= 500 then
+                        valid = true
+                        updateTag(target)
+                    end
+                end
+            end
+            if not valid then
+                table.insert(toRemove, target)
+            else
+                local label = tag:FindFirstChild("Billboard") and tag.Billboard:FindFirstChild("Label")
+                if label then
+                    local text = label.Text
+                    if text == "Label" or (text == "Loading..." and tagCreationTime[target] and now - tagCreationTime[target] > 3) then
+                        table.insert(toRemove, target)
+                    end
+                end
+            end
+        else
+            table.insert(toRemove, target)
+        end
+    end
+
+    for _, target in ipairs(toRemove) do removeTag(target) end
+
+    if frame % 20 == 0 then
         for _, target in pairs(Workspace:GetDescendants()) do
             if target:IsA("Model") and target:FindFirstChildOfClass("Humanoid") then
                 local isPlayer = Players:GetPlayerFromCharacter(target)
@@ -385,33 +367,30 @@ RunService.Heartbeat:Connect(function()
     end
 end)
 
+-- 角色添加事件
 local function onCharacterAdded(player)
     player.CharacterAdded:Connect(function()
         wait(0.5)
-        if PlayerESPEnabled then updatePlayerESP() end
-        if NPCESPEnabled then updateNPCESP() end
+        updateAllESP()
         if NoclipEnabled then toggleNoclip(true) end
     end)
 end
 
-for _, player in pairs(Players:GetPlayers()) do
-    onCharacterAdded(player)
-end
+for _, player in pairs(Players:GetPlayers()) do onCharacterAdded(player) end
 Players.PlayerAdded:Connect(onCharacterAdded)
+-- ===== 通知系统 =====
 local function createNotification(title, subtitle, duration)
-    notificationCount = notificationCount + 1
-    local notifId = notificationCount
-
+    notifCounter = notifCounter + 1
+    local id = notifCounter
     local ScreenGui = LocalPlayer.PlayerGui:FindFirstChild("BackroomsSurvivalUI")
     if not ScreenGui then return end
-
     local MainFrame = ScreenGui:FindFirstChild("MainFrame")
     if not MainFrame then return end
 
     local notif = Instance.new("Frame")
-    notif.Name = "Notification_" .. notifId
+    notif.Name = "Notif_" .. id
     notif.Size = UDim2.new(0, 280, 0, 70)
-    notif.Position = UDim2.new(1, -300, 0, 10 + (#activeNotifications * 80))
+    notif.Position = UDim2.new(1, 20, 0, 10 + #activeNotifications * 80)
     notif.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
     notif.BorderSizePixel = 0
     notif.ClipsDescendants = true
@@ -431,7 +410,22 @@ local function createNotification(title, subtitle, duration)
     closeBtn.TextSize = 16
     closeBtn.Parent = notif
     closeBtn.MouseButton1Click:Connect(function()
-        dismissNotification(notifId)
+        local tween = TweenService:Create(notif, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
+            Position = UDim2.new(1, 20, 0, notif.Position.Y.Offset)
+        })
+        tween:Play()
+        tween.Completed:Connect(function()
+            notif:Destroy()
+            table.remove(activeNotifications, table.find(activeNotifications, id))
+            for i, v in ipairs(activeNotifications) do
+                local n = MainFrame:FindFirstChild("Notif_" .. v)
+                if n then
+                    TweenService:Create(n, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+                        Position = UDim2.new(1, -300, 0, 10 + (i-1)*80)
+                    }):Play()
+                end
+            end
+        end)
     end)
 
     local titleLabel = Instance.new("TextLabel")
@@ -457,78 +451,38 @@ local function createNotification(title, subtitle, duration)
     subLabel.TextWrapped = true
     subLabel.Parent = notif
 
-    table.insert(activeNotifications, notifId)
+    table.insert(activeNotifications, id)
 
-    local function slideIn()
-        notif.Position = UDim2.new(1, 20, 0, 10 + ((#activeNotifications - 1) * 80))
-        local tween = TweenService:Create(notif, TweenInfo.new(0.35, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
-            Position = UDim2.new(1, -300, 0, 10 + ((#activeNotifications - 1) * 80))
-        })
-        tween:Play()
-    end
-    slideIn()
+    local tweenIn = TweenService:Create(notif, TweenInfo.new(0.35, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+        Position = UDim2.new(1, -300, 0, 10 + (#activeNotifications-1)*80)
+    })
+    tweenIn:Play()
 
     if duration then
         task.delay(duration, function()
-            dismissNotification(notifId)
+            if not notif.Parent then return end
+            closeBtn.MouseButton1Click:Fire()
         end)
     end
-
-    return notifId
 end
 
-local function dismissNotification(id)
-    local ScreenGui = LocalPlayer.PlayerGui:FindFirstChild("BackroomsSurvivalUI")
-    if not ScreenGui then return end
-    local MainFrame = ScreenGui:FindFirstChild("MainFrame")
-    if not MainFrame then return end
-
-    local notif = MainFrame:FindFirstChild("Notification_" .. id)
-    if not notif then return end
-
-    for i, v in ipairs(activeNotifications) do
-        if v == id then
-            table.remove(activeNotifications, i)
-            break
-        end
-    end
-
-    local tween = TweenService:Create(notif, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
-        Position = UDim2.new(1, 20, 0, notif.Position.Y.Offset)
-    })
-    tween:Play()
-    tween.Completed:Connect(function()
-        notif:Destroy()
-        for idx, notifId in ipairs(activeNotifications) do
-            local n = MainFrame:FindFirstChild("Notification_" .. notifId)
-            if n then
-                local targetY = 10 + ((idx - 1) * 80)
-                local moveTween = TweenService:Create(n, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
-                    Position = UDim2.new(1, -300, 0, targetY)
-                })
-                moveTween:Play()
-            end
-        end
-    end)
-end
-
+-- ===== 颜色选择器 =====
 local colorPickerOpen = false
-local colorPickerTarget = nil
 
-local function createColorPicker(targetColor, callback, position)
+local function createColorPicker(initialColor, callback, position)
     local ScreenGui = LocalPlayer.PlayerGui:FindFirstChild("BackroomsSurvivalUI")
     if not ScreenGui then return end
     local MainFrame = ScreenGui:FindFirstChild("MainFrame")
     if not MainFrame then return end
 
     if colorPickerOpen then
-        local existing = MainFrame:FindFirstChild("ColorPickerFrame")
-        if existing then existing:Destroy() end
+        local old = MainFrame:FindFirstChild("ColorPicker")
+        if old then old:Destroy() end
         colorPickerOpen = false
     end
 
     local picker = Instance.new("Frame")
-    picker.Name = "ColorPickerFrame"
+    picker.Name = "ColorPicker"
     picker.Size = UDim2.new(0, 220, 0, 200)
     picker.Position = position or UDim2.new(0.5, -110, 0.5, -100)
     picker.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
@@ -583,15 +537,17 @@ local function createColorPicker(targetColor, callback, position)
     colorImage.ScaleType = Enum.ScaleType.Fit
     colorImage.Parent = picker
 
-    local colorFrame = Instance.new("Frame")
-    colorFrame.Size = UDim2.new(0, 40, 0, 30)
-    colorFrame.Position = UDim2.new(1, -55, 1, -40)
-    colorFrame.BackgroundColor3 = targetColor
-    colorFrame.BorderSizePixel = 0
-    colorFrame.Parent = picker
-    local cfCorner = Instance.new("UICorner")
-    cfCorner.CornerRadius = UDim.new(0, 4)
-    cfCorner.Parent = colorFrame
+    local preview = Instance.new("Frame")
+    preview.Size = UDim2.new(0, 40, 0, 30)
+    preview.Position = UDim2.new(1, -55, 1, -40)
+    preview.BackgroundColor3 = initialColor
+    preview.BorderSizePixel = 0
+    preview.Parent = picker
+    local previewCorner = Instance.new("UICorner")
+    previewCorner.CornerRadius = UDim.new(0, 4)
+    previewCorner.Parent = preview
+
+    local currentColor = initialColor
 
     colorImage.MouseButton1Click:Connect(function(x, y)
         local absPos = colorImage.AbsolutePosition
@@ -600,9 +556,9 @@ local function createColorPicker(targetColor, callback, position)
         local relY = (y - absPos.Y) / absSize.Y
         relX = math.clamp(relX, 0, 1)
         relY = math.clamp(relY, 0, 1)
-        local color = Color3.fromHSV(relX, 1 - relY, 1)
-        colorFrame.BackgroundColor3 = color
-        if callback then callback(color) end
+        currentColor = Color3.fromHSV(relX, 1 - relY, 1)
+        preview.BackgroundColor3 = currentColor
+        if callback then callback(currentColor) end
     end)
 
     local confirmBtn = Instance.new("TextButton")
@@ -618,15 +574,12 @@ local function createColorPicker(targetColor, callback, position)
     btnCorner.CornerRadius = UDim.new(0, 4)
     btnCorner.Parent = confirmBtn
     confirmBtn.MouseButton1Click:Connect(function()
-        if callback then callback(colorFrame.BackgroundColor3) end
+        if callback then callback(currentColor) end
         picker:Destroy()
         colorPickerOpen = false
     end)
 
     colorPickerOpen = true
-    colorPickerTarget = picker
-
-    return picker
 end
 local function createUI()
     if LocalPlayer.PlayerGui:FindFirstChild("BackroomsSurvivalUI") then return end
@@ -646,19 +599,20 @@ local function createUI()
     MainFrame.ClipsDescendants = true
     MainFrame.Parent = ScreenGui
 
-    local UICorner = Instance.new("UICorner")
-    UICorner.CornerRadius = UDim.new(0, 8)
-    UICorner.Parent = MainFrame
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0, 8)
+    corner.Parent = MainFrame
 
+    -- Title Bar
     local TitleBar = Instance.new("Frame")
     TitleBar.Name = "TitleBar"
     TitleBar.Size = UDim2.new(1, 0, 0, 50)
     TitleBar.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
     TitleBar.Active = true
     TitleBar.Parent = MainFrame
-    local TitleBarCorner = Instance.new("UICorner")
-    TitleBarCorner.CornerRadius = UDim.new(0, 8)
-    TitleBarCorner.Parent = TitleBar
+    local tbCorner = Instance.new("UICorner")
+    tbCorner.CornerRadius = UDim.new(0, 8)
+    tbCorner.Parent = TitleBar
 
     local Title = Instance.new("TextLabel")
     Title.Size = UDim2.new(1, -70, 0, 20)
@@ -684,16 +638,16 @@ local function createUI()
     SubTitle.TextYAlignment = Enum.TextYAlignment.Top
     SubTitle.Parent = TitleBar
 
-    local CloseButton = Instance.new("TextButton")
-    CloseButton.Size = UDim2.new(0, 30, 0, 30)
-    CloseButton.Position = UDim2.new(1, -35, 0, 10)
-    CloseButton.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
-    CloseButton.Text = "X"
-    CloseButton.TextColor3 = Color3.new(1, 1, 1)
-    CloseButton.Font = Enum.Font.SourceSansBold
-    CloseButton.TextSize = 18
-    CloseButton.Parent = TitleBar
-    CloseButton.MouseButton1Click:Connect(function()
+    local CloseBtn = Instance.new("TextButton")
+    CloseBtn.Size = UDim2.new(0, 30, 0, 30)
+    CloseBtn.Position = UDim2.new(1, -35, 0, 10)
+    CloseBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+    CloseBtn.Text = "X"
+    CloseBtn.TextColor3 = Color3.new(1, 1, 1)
+    CloseBtn.Font = Enum.Font.SourceSansBold
+    CloseBtn.TextSize = 18
+    CloseBtn.Parent = TitleBar
+    CloseBtn.MouseButton1Click:Connect(function()
         PlayerESPEnabled = false
         NPCESPEnabled = false
         FullbrightEnabled = false
@@ -703,16 +657,17 @@ local function createUI()
         ScreenGui:Destroy()
     end)
 
-    local MinButton = Instance.new("TextButton")
-    MinButton.Size = UDim2.new(0, 30, 0, 30)
-    MinButton.Position = UDim2.new(1, -70, 0, 10)
-    MinButton.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
-    MinButton.Text = "-"
-    MinButton.TextColor3 = Color3.new(1, 1, 1)
-    MinButton.Font = Enum.Font.SourceSansBold
-    MinButton.TextSize = 22
-    MinButton.Parent = TitleBar
+    local MinBtn = Instance.new("TextButton")
+    MinBtn.Size = UDim2.new(0, 30, 0, 30)
+    MinBtn.Position = UDim2.new(1, -70, 0, 10)
+    MinBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+    MinBtn.Text = "-"
+    MinBtn.TextColor3 = Color3.new(1, 1, 1)
+    MinBtn.Font = Enum.Font.SourceSansBold
+    MinBtn.TextSize = 22
+    MinBtn.Parent = TitleBar
 
+    -- Content Container
     local ContentContainer = Instance.new("Frame")
     ContentContainer.Name = "ContentContainer"
     ContentContainer.Size = UDim2.new(1, 0, 1, -50)
@@ -721,12 +676,14 @@ local function createUI()
     ContentContainer.ClipsDescendants = true
     ContentContainer.Parent = MainFrame
 
+    -- Left Panel
     local LeftPanel = Instance.new("Frame")
     LeftPanel.Size = UDim2.new(0, 130, 1, 0)
     LeftPanel.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
     LeftPanel.BorderSizePixel = 0
     LeftPanel.Parent = ContentContainer
 
+    -- Right Panel
     local RightPanel = Instance.new("Frame")
     RightPanel.Size = UDim2.new(1, -130, 1, 0)
     RightPanel.Position = UDim2.new(0, 130, 0, 0)
@@ -734,6 +691,7 @@ local function createUI()
     RightPanel.BorderSizePixel = 0
     RightPanel.Parent = ContentContainer
 
+    -- 滚动框架工厂
     local function createScrollingFrame(name)
         local sc = Instance.new("ScrollingFrame")
         sc.Name = name
@@ -763,10 +721,10 @@ local function createUI()
         return sc, container, layout
     end
 
-    local UpdateScroller, UpdateContainer, UpdateLayout = createScrollingFrame("UpdateScroller")
-    local SettingsScroller, SettingsContainer, SettingsLayout = createScrollingFrame("SettingsScroller")
-    local ESPScroller, ESPContainer, ESPLayout = createScrollingFrame("ESPScroller")
-    local PuzzleScroller, PuzzleContainer, PuzzleLayout = createScrollingFrame("PuzzleScroller")
+    local UpdateScroller, UpdateContainer, _ = createScrollingFrame("UpdateScroller")
+    local SettingsScroller, SettingsContainer, _ = createScrollingFrame("SettingsScroller")
+    local ESPScroller, ESPContainer, _ = createScrollingFrame("ESPScroller")
+    local PuzzleScroller, PuzzleContainer, _ = createScrollingFrame("PuzzleScroller")
 
     UpdateScroller.Visible = false
     SettingsScroller.Visible = false
@@ -802,349 +760,329 @@ local function createUI()
     createCategoryButton("⚙️基础功能⚙️", SettingsScroller, 38)
     createCategoryButton("👁️透视👁️", ESPScroller, 76)
     createCategoryButton("🔑解谜🔑", PuzzleScroller, 114)
-    local function buildUpdateContent()
-        local mainTitle = Instance.new("TextLabel")
-        mainTitle.Size = UDim2.new(1, 0, 0, 30)
-        mainTitle.BackgroundTransparency = 1
-        mainTitle.Text = "更新公告"
-        mainTitle.TextColor3 = Color3.new(1, 1, 1)
-        mainTitle.Font = Enum.Font.SourceSansBold
-        mainTitle.TextSize = 20
-        mainTitle.TextXAlignment = Enum.TextXAlignment.Left
-        mainTitle.Parent = UpdateContainer
+-- ===== 更新内容 =====
+local function buildUpdate()
+    local mainTitle = Instance.new("TextLabel")
+    mainTitle.Size = UDim2.new(1, 0, 0, 30)
+    mainTitle.BackgroundTransparency = 1
+    mainTitle.Text = "更新公告"
+    mainTitle.TextColor3 = Color3.new(1, 1, 1)
+    mainTitle.Font = Enum.Font.SourceSansBold
+    mainTitle.TextSize = 20
+    mainTitle.TextXAlignment = Enum.TextXAlignment.Left
+    mainTitle.Parent = UpdateContainer
 
-        local versionLabel = Instance.new("TextLabel")
-        versionLabel.Size = UDim2.new(1, 0, 0, 22)
-        versionLabel.BackgroundTransparency = 1
-        versionLabel.Text = "V0.2.2.5"
-        versionLabel.TextColor3 = Color3.fromRGB(160, 160, 160)
-        versionLabel.Font = Enum.Font.SourceSansBold
-        versionLabel.TextSize = 16
-        versionLabel.TextXAlignment = Enum.TextXAlignment.Left
-        versionLabel.Parent = UpdateContainer
+    local versionLabel = Instance.new("TextLabel")
+    versionLabel.Size = UDim2.new(1, 0, 0, 22)
+    versionLabel.BackgroundTransparency = 1
+    versionLabel.Text = "V0.2.2.5"
+    versionLabel.TextColor3 = Color3.fromRGB(160, 160, 160)
+    versionLabel.Font = Enum.Font.SourceSansBold
+    versionLabel.TextSize = 16
+    versionLabel.TextXAlignment = Enum.TextXAlignment.Left
+    versionLabel.Parent = UpdateContainer
 
-        local items = {
-            "▪ 为透视增添个性化功能。",
-            "▪ 增加\"解谜\"分类，目前可查看Level 1入口门的密码。"
-        }
-        for _, line in ipairs(items) do
-            local lbl = Instance.new("TextLabel")
-            lbl.Size = UDim2.new(1, 0, 0, 24)
-            lbl.BackgroundTransparency = 1
-            lbl.Text = line
-            lbl.TextColor3 = Color3.new(1, 1, 1)
-            lbl.Font = Enum.Font.SourceSans
-            lbl.TextSize = 14
-            lbl.TextXAlignment = Enum.TextXAlignment.Left
-            lbl.TextWrapped = true
-            lbl.Parent = UpdateContainer
-        end
-
-        local oldVersionLabel = Instance.new("TextLabel")
-        oldVersionLabel.Size = UDim2.new(1, 0, 0, 22)
-        oldVersionLabel.BackgroundTransparency = 1
-        oldVersionLabel.Text = "V0.1.7.0"
-        oldVersionLabel.TextColor3 = Color3.fromRGB(130, 130, 130)
-        oldVersionLabel.Font = Enum.Font.SourceSansBold
-        oldVersionLabel.TextSize = 14
-        oldVersionLabel.TextXAlignment = Enum.TextXAlignment.Left
-        oldVersionLabel.Parent = UpdateContainer
-
-        local oldItems = {
-            "▪ 重构透视代码逻辑。",
-            "▪ 添加了无碰撞功能。"
-        }
-        for _, line in ipairs(oldItems) do
-            local lbl = Instance.new("TextLabel")
-            lbl.Size = UDim2.new(1, 0, 0, 22)
-            lbl.BackgroundTransparency = 1
-            lbl.Text = line
-            lbl.TextColor3 = Color3.fromRGB(160, 160, 160)
-            lbl.Font = Enum.Font.SourceSans
-            lbl.TextSize = 13
-            lbl.TextXAlignment = Enum.TextXAlignment.Left
-            lbl.TextWrapped = true
-            lbl.Parent = UpdateContainer
-        end
+    local items = {
+        "▪ 为透视增添个性化功能。",
+        "▪ 增加\"解谜\"分类，目前可查看Level 1入口门的密码。"
+    }
+    for _, line in ipairs(items) do
+        local lbl = Instance.new("TextLabel")
+        lbl.Size = UDim2.new(1, 0, 0, 24)
+        lbl.BackgroundTransparency = 1
+        lbl.Text = line
+        lbl.TextColor3 = Color3.new(1, 1, 1)
+        lbl.Font = Enum.Font.SourceSans
+        lbl.TextSize = 14
+        lbl.TextXAlignment = Enum.TextXAlignment.Left
+        lbl.TextWrapped = true
+        lbl.Parent = UpdateContainer
     end
-    buildUpdateContent()
 
-    local function buildSettings()
-        local function createRow(labelText, initialState, callback)
-            local row = Instance.new("Frame")
-            row.Size = UDim2.new(1, 0, 0, 30)
-            row.BackgroundTransparency = 1
-            row.Parent = SettingsContainer
+    local oldVersion = Instance.new("TextLabel")
+    oldVersion.Size = UDim2.new(1, 0, 0, 22)
+    oldVersion.BackgroundTransparency = 1
+    oldVersion.Text = "V0.1.7.0"
+    oldVersion.TextColor3 = Color3.fromRGB(130, 130, 130)
+    oldVersion.Font = Enum.Font.SourceSansBold
+    oldVersion.TextSize = 14
+    oldVersion.TextXAlignment = Enum.TextXAlignment.Left
+    oldVersion.Parent = UpdateContainer
 
-            local label = Instance.new("TextLabel")
-            label.Size = UDim2.new(0.7, -10, 1, 0)
-            label.Position = UDim2.new(0, 0, 0, 0)
-            label.BackgroundTransparency = 1
-            label.Text = labelText
-            label.TextColor3 = Color3.new(1, 1, 1)
-            label.Font = Enum.Font.SourceSans
-            label.TextSize = 16
-            label.TextXAlignment = Enum.TextXAlignment.Left
-            label.Parent = row
+    local oldItems = {
+        "▪ 重构透视代码逻辑。",
+        "▪ 添加了无碰撞功能。"
+    }
+    for _, line in ipairs(oldItems) do
+        local lbl = Instance.new("TextLabel")
+        lbl.Size = UDim2.new(1, 0, 0, 22)
+        lbl.BackgroundTransparency = 1
+        lbl.Text = line
+        lbl.TextColor3 = Color3.fromRGB(160, 160, 160)
+        lbl.Font = Enum.Font.SourceSans
+        lbl.TextSize = 13
+        lbl.TextXAlignment = Enum.TextXAlignment.Left
+        lbl.TextWrapped = true
+        lbl.Parent = UpdateContainer
+    end
+end
+buildUpdate()
 
-            local toggleBtn = Instance.new("TextButton")
-            toggleBtn.Size = UDim2.new(0, 50, 0, 26)
-            toggleBtn.Position = UDim2.new(1, -50, 0.5, -13)
-            toggleBtn.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
-            toggleBtn.Text = ""
-            toggleBtn.Parent = row
+-- ===== 基础功能 =====
+local function buildSettings()
+    local function createRow(labelText, initialState, callback)
+        local row = Instance.new("Frame")
+        row.Size = UDim2.new(1, 0, 0, 30)
+        row.BackgroundTransparency = 1
+        row.Parent = SettingsContainer
 
-            local toggleCorner = Instance.new("UICorner")
-            toggleCorner.CornerRadius = UDim.new(0, 4)
-            toggleCorner.Parent = toggleBtn
+        local label = Instance.new("TextLabel")
+        label.Size = UDim2.new(0.7, -10, 1, 0)
+        label.Position = UDim2.new(0, 0, 0, 0)
+        label.BackgroundTransparency = 1
+        label.Text = labelText
+        label.TextColor3 = Color3.new(1, 1, 1)
+        label.Font = Enum.Font.SourceSans
+        label.TextSize = 16
+        label.TextXAlignment = Enum.TextXAlignment.Left
+        label.Parent = row
 
-            local dot = Instance.new("Frame")
-            dot.Size = UDim2.new(0, 22, 0, 22)
-            dot.Position = UDim2.new(0, 2, 0.5, -11)
-            dot.BackgroundColor3 = Color3.fromRGB(120, 120, 120)
-            dot.BorderSizePixel = 0
-            dot.Parent = toggleBtn
+        local toggleBtn = Instance.new("TextButton")
+        toggleBtn.Size = UDim2.new(0, 50, 0, 26)
+        toggleBtn.Position = UDim2.new(1, -50, 0.5, -13)
+        toggleBtn.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
+        toggleBtn.Text = ""
+        toggleBtn.Parent = row
+        local tCorner = Instance.new("UICorner")
+        tCorner.CornerRadius = UDim.new(0, 4)
+        tCorner.Parent = toggleBtn
 
-            local dotCorner = Instance.new("UICorner")
-            dotCorner.CornerRadius = UDim.new(1, 0)
-            dotCorner.Parent = dot
+        local dot = Instance.new("Frame")
+        dot.Size = UDim2.new(0, 22, 0, 22)
+        dot.Position = UDim2.new(0, 2, 0.5, -11)
+        dot.BackgroundColor3 = Color3.fromRGB(120, 120, 120)
+        dot.BorderSizePixel = 0
+        dot.Parent = toggleBtn
+        local dCorner = Instance.new("UICorner")
+        dCorner.CornerRadius = UDim.new(1, 0)
+        dCorner.Parent = dot
 
-            local state = initialState
-
-            local function updateVisual(isOn)
-                local targetPos, targetColor, bgColor
-                if isOn then
-                    targetPos = UDim2.new(1, -24, 0.5, -11)
-                    targetColor = Color3.fromRGB(255, 255, 255)
-                    bgColor = Color3.fromRGB(46, 204, 113)
-                else
-                    targetPos = UDim2.new(0, 2, 0.5, -11)
-                    targetColor = Color3.fromRGB(120, 120, 120)
-                    bgColor = Color3.fromRGB(80, 80, 80)
-                end
-                local tweenInfo = TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
-                TweenService:Create(dot, tweenInfo, { Position = targetPos, BackgroundColor3 = targetColor }):Play()
-                TweenService:Create(toggleBtn, tweenInfo, { BackgroundColor3 = bgColor }):Play()
+        local state = initialState
+        local function updateVisual(isOn)
+            local targetPos, targetColor, bgColor
+            if isOn then
+                targetPos = UDim2.new(1, -24, 0.5, -11)
+                targetColor = Color3.fromRGB(255, 255, 255)
+                bgColor = Color3.fromRGB(46, 204, 113)
+            else
+                targetPos = UDim2.new(0, 2, 0.5, -11)
+                targetColor = Color3.fromRGB(120, 120, 120)
+                bgColor = Color3.fromRGB(80, 80, 80)
             end
-
-            updateVisual(state)
-
-            toggleBtn.MouseButton1Click:Connect(function()
-                state = not state
-                callback(state)
-                updateVisual(state)
-            end)
+            local ti = TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+            TweenService:Create(dot, ti, { Position = targetPos, BackgroundColor3 = targetColor }):Play()
+            TweenService:Create(toggleBtn, ti, { BackgroundColor3 = bgColor }):Play()
         end
+        updateVisual(state)
 
-        createRow("全图高亮", FullbrightEnabled, function(value)
-            FullbrightEnabled = value
-            applyFullbright(value)
-        end)
-
-        createRow("无碰撞", NoclipEnabled, function(value)
-            toggleNoclip(value)
+        toggleBtn.MouseButton1Click:Connect(function()
+            state = not state
+            callback(state)
+            updateVisual(state)
         end)
     end
-    buildSettings()
 
-    local function buildESP()
-        local function createRow(labelText, initialState, callback)
-            local row = Instance.new("Frame")
-            row.Size = UDim2.new(1, 0, 0, 30)
-            row.BackgroundTransparency = 1
-            row.Parent = ESPContainer
+    createRow("全图高亮", FullbrightEnabled, function(v)
+        FullbrightEnabled = v
+        applyFullbright(v)
+    end)
+    createRow("无碰撞", NoclipEnabled, function(v)
+        toggleNoclip(v)
+    end)
+end
+buildSettings()
 
-            local label = Instance.new("TextLabel")
-            label.Size = UDim2.new(0.6, -10, 1, 0)
-            label.Position = UDim2.new(0, 0, 0, 0)
-            label.BackgroundTransparency = 1
-            label.Text = labelText
-            label.TextColor3 = Color3.new(1, 1, 1)
-            label.Font = Enum.Font.SourceSans
-            label.TextSize = 16
-            label.TextXAlignment = Enum.TextXAlignment.Left
-            label.Parent = row
+-- ===== 透视 =====
+local function buildESP()
+    local function createRow(labelText, initialState, callback)
+        local row = Instance.new("Frame")
+        row.Size = UDim2.new(1, 0, 0, 30)
+        row.BackgroundTransparency = 1
+        row.Parent = ESPContainer
 
-            local toggleBtn = Instance.new("TextButton")
-            toggleBtn.Size = UDim2.new(0, 50, 0, 26)
-            toggleBtn.Position = UDim2.new(1, -50, 0.5, -13)
-            toggleBtn.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
-            toggleBtn.Text = ""
-            toggleBtn.Parent = row
+        local label = Instance.new("TextLabel")
+        label.Size = UDim2.new(0.6, -10, 1, 0)
+        label.Position = UDim2.new(0, 0, 0, 0)
+        label.BackgroundTransparency = 1
+        label.Text = labelText
+        label.TextColor3 = Color3.new(1, 1, 1)
+        label.Font = Enum.Font.SourceSans
+        label.TextSize = 16
+        label.TextXAlignment = Enum.TextXAlignment.Left
+        label.Parent = row
 
-            local toggleCorner = Instance.new("UICorner")
-            toggleCorner.CornerRadius = UDim.new(0, 4)
-            toggleCorner.Parent = toggleBtn
+        local toggleBtn = Instance.new("TextButton")
+        toggleBtn.Size = UDim2.new(0, 50, 0, 26)
+        toggleBtn.Position = UDim2.new(1, -50, 0.5, -13)
+        toggleBtn.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
+        toggleBtn.Text = ""
+        toggleBtn.Parent = row
+        local tCorner = Instance.new("UICorner")
+        tCorner.CornerRadius = UDim.new(0, 4)
+        tCorner.Parent = toggleBtn
 
-            local dot = Instance.new("Frame")
-            dot.Size = UDim2.new(0, 22, 0, 22)
-            dot.Position = UDim2.new(0, 2, 0.5, -11)
-            dot.BackgroundColor3 = Color3.fromRGB(120, 120, 120)
-            dot.BorderSizePixel = 0
-            dot.Parent = toggleBtn
+        local dot = Instance.new("Frame")
+        dot.Size = UDim2.new(0, 22, 0, 22)
+        dot.Position = UDim2.new(0, 2, 0.5, -11)
+        dot.BackgroundColor3 = Color3.fromRGB(120, 120, 120)
+        dot.BorderSizePixel = 0
+        dot.Parent = toggleBtn
+        local dCorner = Instance.new("UICorner")
+        dCorner.CornerRadius = UDim.new(1, 0)
+        dCorner.Parent = dot
 
-            local dotCorner = Instance.new("UICorner")
-            dotCorner.CornerRadius = UDim.new(1, 0)
-            dotCorner.Parent = dot
-
-            local state = initialState
-
-            local function updateVisual(isOn)
-                local targetPos, targetColor, bgColor
-                if isOn then
-                    targetPos = UDim2.new(1, -24, 0.5, -11)
-                    targetColor = Color3.fromRGB(255, 255, 255)
-                    bgColor = Color3.fromRGB(46, 204, 113)
-                else
-                    targetPos = UDim2.new(0, 2, 0.5, -11)
-                    targetColor = Color3.fromRGB(120, 120, 120)
-                    bgColor = Color3.fromRGB(80, 80, 80)
-                end
-                local tweenInfo = TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
-                TweenService:Create(dot, tweenInfo, { Position = targetPos, BackgroundColor3 = targetColor }):Play()
-                TweenService:Create(toggleBtn, tweenInfo, { BackgroundColor3 = bgColor }):Play()
+        local state = initialState
+        local function updateVisual(isOn)
+            local targetPos, targetColor, bgColor
+            if isOn then
+                targetPos = UDim2.new(1, -24, 0.5, -11)
+                targetColor = Color3.fromRGB(255, 255, 255)
+                bgColor = Color3.fromRGB(46, 204, 113)
+            else
+                targetPos = UDim2.new(0, 2, 0.5, -11)
+                targetColor = Color3.fromRGB(120, 120, 120)
+                bgColor = Color3.fromRGB(80, 80, 80)
             end
+            local ti = TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+            TweenService:Create(dot, ti, { Position = targetPos, BackgroundColor3 = targetColor }):Play()
+            TweenService:Create(toggleBtn, ti, { BackgroundColor3 = bgColor }):Play()
+        end
+        updateVisual(state)
 
+        toggleBtn.MouseButton1Click:Connect(function()
+            state = not state
+            callback(state)
             updateVisual(state)
-
-            toggleBtn.MouseButton1Click:Connect(function()
-                state = not state
-                callback(state)
-                updateVisual(state)
-            end)
-        end
-
-        createRow("玩家ESP", PlayerESPEnabled, function(value)
-            PlayerESPEnabled = value
-            updateAllESP()
         end)
-
-        createRow("NPCs ESP", NPCESPEnabled, function(value)
-            NPCESPEnabled = value
-            updateAllESP()
-        end)
-
-        createRow("描边启用", ESPOutlineEnabled, function(value)
-            ESPOutlineEnabled = value
-            updateAllESP()
-        end)
-
-        local function createColorRow(labelText, getColor, setColor)
-            local row = Instance.new("Frame")
-            row.Size = UDim2.new(1, 0, 0, 30)
-            row.BackgroundTransparency = 1
-            row.Parent = ESPContainer
-
-            local label = Instance.new("TextLabel")
-            label.Size = UDim2.new(0.6, -10, 1, 0)
-            label.Position = UDim2.new(0, 0, 0, 0)
-            label.BackgroundTransparency = 1
-            label.Text = labelText
-            label.TextColor3 = Color3.new(1, 1, 1)
-            label.Font = Enum.Font.SourceSans
-            label.TextSize = 16
-            label.TextXAlignment = Enum.TextXAlignment.Left
-            label.Parent = row
-
-            local colorBox = Instance.new("Frame")
-            colorBox.Size = UDim2.new(0, 30, 0, 22)
-            colorBox.Position = UDim2.new(1, -35, 0.5, -11)
-            colorBox.BackgroundColor3 = getColor()
-            colorBox.BorderSizePixel = 0
-            colorBox.Parent = row
-            local boxCorner = Instance.new("UICorner")
-            boxCorner.CornerRadius = UDim.new(0, 4)
-            boxCorner.Parent = colorBox
-
-            colorBox.MouseButton1Click:Connect(function()
-                local pickerPos = UDim2.new(0.5, -110, 0.5, -100)
-                createColorPicker(getColor(), function(newColor)
-                    setColor(newColor)
-                    colorBox.BackgroundColor3 = newColor
-                    updateAllESP()
-                end, pickerPos)
-            end)
-        end
-
-        createColorRow("描边颜色", function() return ESPOutlineColor end, function(c) ESPOutlineColor = c end)
-        createColorRow("高光颜色", function() return ESPFillColor end, function(c) ESPFillColor = c end)
     end
-    buildESP()
 
-    local function buildPuzzle()
-        local btn = Instance.new("TextButton")
-        btn.Size = UDim2.new(1, -20, 0, 40)
-        btn.Position = UDim2.new(0, 10, 0, 10)
-        btn.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
-        btn.Text = "Level 1入口门密码"
-        btn.TextColor3 = Color3.new(1, 1, 1)
-        btn.Font = Enum.Font.SourceSans
-        btn.TextSize = 16
-        btn.Parent = PuzzleContainer
-        local btnCorner = Instance.new("UICorner")
-        btnCorner.CornerRadius = UDim.new(0, 6)
-        btnCorner.Parent = btn
+    createRow("玩家ESP", PlayerESPEnabled, function(v)
+        PlayerESPEnabled = v
+        updateAllESP()
+    end)
+    createRow("NPCs ESP", NPCESPEnabled, function(v)
+        NPCESPEnabled = v
+        updateAllESP()
+    end)
+    createRow("描边启用", ESPOutlineEnabled, function(v)
+        ESPOutlineEnabled = v
+        updateAllESP()
+    end)
 
-        btn.MouseButton1Click:Connect(function()
-            local passcode = "未找到"
-            local success = false
-            local signText = ""
-            local textText = ""
+    -- 颜色行
+    local function createColorRow(labelText, getColor, setColor)
+        local row = Instance.new("Frame")
+        row.Size = UDim2.new(1, 0, 0, 30)
+        row.BackgroundTransparency = 1
+        row.Parent = ESPContainer
 
-            local maps = Workspace:FindFirstChild("Game") and Workspace.Game:FindFirstChild("Maps")
-            if maps then
-                local level0 = maps:FindFirstChild("Level0")
-                if level0 then
-                    local customDoor = level0:FindFirstChild("CustomDoor")
-                    if customDoor then
-                        local exitDoor = customDoor:FindFirstChild("ExitDoor")
-                        if exitDoor then
-                            local passcodeObj = exitDoor:FindFirstChild("Passcode")
-                            if passcodeObj then
-                                local surfaceGui = passcodeObj:FindFirstChild("SurfaceGui")
-                                if surfaceGui then
-                                    local sign = surfaceGui:FindFirstChild("SIGN")
-                                    if sign then
-                                        signText = sign.Text or ""
-                                        textText = signText
-                                        success = true
-                                    end
+        local label = Instance.new("TextLabel")
+        label.Size = UDim2.new(0.6, -10, 1, 0)
+        label.Position = UDim2.new(0, 0, 0, 0)
+        label.BackgroundTransparency = 1
+        label.Text = labelText
+        label.TextColor3 = Color3.new(1, 1, 1)
+        label.Font = Enum.Font.SourceSans
+        label.TextSize = 16
+        label.TextXAlignment = Enum.TextXAlignment.Left
+        label.Parent = row
+
+        local colorBox = Instance.new("Frame")
+        colorBox.Size = UDim2.new(0, 30, 0, 22)
+        colorBox.Position = UDim2.new(1, -35, 0.5, -11)
+        colorBox.BackgroundColor3 = getColor()
+        colorBox.BorderSizePixel = 0
+        colorBox.Parent = row
+        local boxCorner = Instance.new("UICorner")
+        boxCorner.CornerRadius = UDim.new(0, 4)
+        boxCorner.Parent = colorBox
+
+        colorBox.MouseButton1Click:Connect(function()
+            createColorPicker(getColor(), function(newColor)
+                setColor(newColor)
+                colorBox.BackgroundColor3 = newColor
+                updateAllESP()
+            end, UDim2.new(0.5, -110, 0.5, -100))
+        end)
+    end
+
+    createColorRow("描边颜色", function() return ESPOutlineColor end, function(c) ESPOutlineColor = c end)
+    createColorRow("高光颜色", function() return ESPFillColor end, function(c) ESPFillColor = c end)
+end
+buildESP()
+
+-- ===== 解谜 =====
+local function buildPuzzle()
+    local btn = Instance.new("TextButton")
+    btn.Size = UDim2.new(1, -20, 0, 40)
+    btn.Position = UDim2.new(0, 10, 0, 10)
+    btn.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+    btn.Text = "Level 1入口门密码"
+    btn.TextColor3 = Color3.new(1, 1, 1)
+    btn.Font = Enum.Font.SourceSans
+    btn.TextSize = 16
+    btn.Parent = PuzzleContainer
+    local btnCorner = Instance.new("UICorner")
+    btnCorner.CornerRadius = UDim.new(0, 6)
+    btnCorner.Parent = btn
+
+    btn.MouseButton1Click:Connect(function()
+        local passcode = "未找到"
+        local success = false
+        local maps = Workspace:FindFirstChild("Game") and Workspace.Game:FindFirstChild("Maps")
+        if maps then
+            local level0 = maps:FindFirstChild("Level0")
+            if level0 then
+                local customDoor = level0:FindFirstChild("CustomDoor")
+                if customDoor then
+                    local exitDoor = customDoor:FindFirstChild("ExitDoor")
+                    if exitDoor then
+                        local passcodeObj = exitDoor:FindFirstChild("Passcode")
+                        if passcodeObj then
+                            local surfaceGui = passcodeObj:FindFirstChild("SurfaceGui")
+                            if surfaceGui then
+                                local sign = surfaceGui:FindFirstChild("SIGN")
+                                if sign then
+                                    passcode = sign.Text or "未找到"
+                                    success = true
                                 end
                             end
                         end
                     end
                 end
             end
-
-            if success then
-                passcode = textText
-                local msg = "密码为: " .. passcode
-                createNotification("执行成功", msg, 6)
-            else
-                createNotification("执行失败", "未找到密码数据，请确认路径是否正确", 5)
-            end
-        end)
-    end
-    buildPuzzle()
-
-    MinButton.MouseButton1Click:Connect(function()
+        end
+        if success then
+            createNotification("执行成功", "密码为: " .. passcode, 6)
+        else
+            createNotification("执行失败", "未找到密码数据，请确认路径是否正确", 5)
+        end
+    end)
+end
+buildPuzzle()
+    -- ===== 最小化/展开 =====
+    MinBtn.MouseButton1Click:Connect(function()
         UIMinimized = not UIMinimized
         local targetSize = UIMinimized and UDim2.new(0, 420, 0, 50) or UDim2.new(0, 420, 0, 300)
         TweenService:Create(MainFrame, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Size = targetSize }):Play()
-        MinButton.Text = UIMinimized and "+" or "-"
-
-        if UIMinimized then
-            ContentContainer.Visible = false
-            ContentContainer.Size = UDim2.new(0, 0, 0, 0)
-        else
-            ContentContainer.Visible = true
-            ContentContainer.Size = UDim2.new(1, 0, 1, -50)
-        end
+        MinBtn.Text = UIMinimized and "+" or "-"
+        ContentContainer.Visible = not UIMinimized
+        ContentContainer.Size = UIMinimized and UDim2.new(0, 0, 0, 0) or UDim2.new(1, 0, 1, -50)
     end)
 
+    -- ===== 拖动 =====
     local dragging = false
     local dragOffset = Vector2.new()
-
     local function onInputBegan(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
             local pos = Vector2.new(input.Position.X, input.Position.Y)
@@ -1157,7 +1095,6 @@ local function createUI()
             end
         end
     end
-
     local function onInputChanged(input)
         if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
             local pos = Vector2.new(input.Position.X, input.Position.Y)
@@ -1165,13 +1102,11 @@ local function createUI()
             MainFrame.Position = UDim2.new(0, newPos.X, 0, newPos.Y)
         end
     end
-
     local function onInputEnded(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
             dragging = false
         end
     end
-
     UserInputService.InputBegan:Connect(onInputBegan)
     UserInputService.InputChanged:Connect(onInputChanged)
     UserInputService.InputEnded:Connect(onInputEnded)
