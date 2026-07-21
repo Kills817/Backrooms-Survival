@@ -249,11 +249,11 @@ local function updateNPCESP()
     end
 end
 
--- ===== 实时更新循环 =====
+-- ===== 实时更新循环（3帧更新距离，12帧扫描新目标） =====
 local frameCounter = 0
 RunService.Heartbeat:Connect(function()
     frameCounter = frameCounter + 1
-    if frameCounter % 2 ~= 0 then return end
+    if frameCounter % 3 ~= 0 then return end  -- 每3帧更新一次
 
     local now = tick()
     local toRemove = {}
@@ -292,7 +292,8 @@ RunService.Heartbeat:Connect(function()
         removeTag(target)
     end
 
-    if frameCounter % 10 == 0 then
+    -- 每12帧扫描一次新目标
+    if frameCounter % 12 == 0 then
         for _, target in pairs(Workspace:GetDescendants()) do
             if target:IsA("Model") and target:FindFirstChildOfClass("Humanoid") then
                 local isPlayer = Players:GetPlayerFromCharacter(target)
