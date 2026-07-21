@@ -3,12 +3,30 @@ local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
 local Workspace = game:GetService("Workspace")
+local Lighting = game:GetService("Lighting")
 
 local LocalPlayer = Players.LocalPlayer
 
 local PlayerESPEnabled = false
 local NPCESPEnabled = false
+local FullbrightEnabled = false
 local UIMinimized = false
+
+local originalBrightness = Lighting.Brightness
+local originalAmbient = Lighting.Ambient
+local originalOutdoorAmbient = Lighting.OutdoorAmbient
+
+local function applyFullbright(enable)
+    if enable then
+        Lighting.Brightness = 2
+        Lighting.Ambient = Color3.new(1, 1, 1)
+        Lighting.OutdoorAmbient = Color3.new(1, 1, 1)
+    else
+        Lighting.Brightness = originalBrightness
+        Lighting.Ambient = originalAmbient
+        Lighting.OutdoorAmbient = originalOutdoorAmbient
+    end
+end
 
 local function createTag(target)
     if target:FindFirstChild("ESPTag") then return end
@@ -192,6 +210,10 @@ local function createUI()
     CloseButton.MouseButton1Click:Connect(function()
         PlayerESPEnabled = false
         NPCESPEnabled = false
+        if FullbrightEnabled then
+            FullbrightEnabled = false
+            applyFullbright(false)
+        end
         refreshTargets()
         ScreenGui:Destroy()
     end)
@@ -227,115 +249,228 @@ local function createUI()
     RightPanel.BorderSizePixel = 0
     RightPanel.Parent = ContentContainer
 
-    local ESPCatButton = Instance.new("TextButton")
-    ESPCatButton.Size = UDim2.new(1, 0, 0, 35)
-    ESPCatButton.Position = UDim2.new(0, 0, 0, 0)
-    ESPCatButton.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
-    ESPCatButton.Text = "👁️ESP👁️"
-    ESPCatButton.TextColor3 = Color3.new(1, 1, 1)
-    ESPCatButton.Font = Enum.Font.SourceSans
-    ESPCatButton.TextSize = 18
-    ESPCatButton.Parent = LeftPanel
-    ESPCatButton.MouseButton1Click:Connect(function()
-        ESPFrame.Visible = true
-    end)
+    local CategoryLayout = Instance.new("UIListLayout")
+    CategoryLayout.FillDirection = Enum.FillDirection.Vertical
+    CategoryLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+    CategoryLayout.VerticalAlignment = Enum.VerticalAlignment.Top
+    CategoryLayout.Padding = UDim.new(0, 5)
+    CategoryLayout.Parent = LeftPanel
+
+    local SettingsFrame = Instance.new("Frame")
+    SettingsFrame.Size = UDim2.new(1, 0, 1, 0)
+    SettingsFrame.BackgroundTransparency = 1
+    SettingsFrame.Visible = true
+    SettingsFrame.Parent = RightPanel
 
     local ESPFrame = Instance.new("Frame")
     ESPFrame.Size = UDim2.new(1, 0, 1, 0)
     ESPFrame.BackgroundTransparency = 1
-    ESPFrame.Visible = true
+    ESPFrame.Visible = false
     ESPFrame.Parent = RightPanel
 
-    local ListContainer = Instance.new("Frame")
-    ListContainer.Size = UDim2.new(1, -20, 1, -10)
-    ListContainer.Position = UDim2.new(0, 10, 0, 5)
-    ListContainer.BackgroundTransparency = 1
-    ListContainer.Parent = ESPFrame
-
-    local ListLayout = Instance.new("UIListLayout")
-    ListLayout.FillDirection = Enum.FillDirection.Vertical
-    ListLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
-    ListLayout.VerticalAlignment = Enum.VerticalAlignment.Top
-    ListLayout.Padding = UDim.new(0, 5)
-    ListLayout.Parent = ListContainer
-
-    local function createRow(labelText, initialState, callback)
-        local row = Instance.new("Frame")
-        row.Size = UDim2.new(1, 0, 0, 30)
-        row.BackgroundTransparency = 1
-        row.Parent = ListContainer
-
-        local label = Instance.new("TextLabel")
-        label.Size = UDim2.new(0.7, -10, 1, 0)
-        label.Position = UDim2.new(0, 0, 0, 0)
-        label.BackgroundTransparency = 1
-        label.Text = labelText
-        label.TextColor3 = Color3.new(1, 1, 1)
-        label.Font = Enum.Font.SourceSans
-        label.TextSize = 16
-        label.TextXAlignment = Enum.TextXAlignment.Left
-        label.Parent = row
-
-        local toggleBtn = Instance.new("TextButton")
-        toggleBtn.Size = UDim2.new(0, 50, 0, 26)
-        toggleBtn.Position = UDim2.new(1, -50, 0.5, -13)
-        toggleBtn.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
-        toggleBtn.Text = ""
-        toggleBtn.Parent = row
-
-        local toggleCorner = Instance.new("UICorner")
-        toggleCorner.CornerRadius = UDim.new(0, 4)
-        toggleCorner.Parent = toggleBtn
-
-        local dot = Instance.new("Frame")
-        dot.Size = UDim2.new(0, 22, 0, 22)
-        dot.Position = UDim2.new(0, 2, 0.5, -11)
-        dot.BackgroundColor3 = Color3.fromRGB(120, 120, 120)
-        dot.BorderSizePixel = 0
-        dot.Parent = toggleBtn
-
-        local dotCorner = Instance.new("UICorner")
-        dotCorner.CornerRadius = UDim.new(1, 0)
-        dotCorner.Parent = dot
-
-        local state = initialState
-
-        local function updateVisual(isOn)
-            local targetPos, targetColor, bgColor
-            if isOn then
-                targetPos = UDim2.new(1, -24, 0.5, -11)
-                targetColor = Color3.fromRGB(255, 255, 255)
-                bgColor = Color3.fromRGB(46, 204, 113)
-            else
-                targetPos = UDim2.new(0, 2, 0.5, -11)
-                targetColor = Color3.fromRGB(120, 120, 120)
-                bgColor = Color3.fromRGB(80, 80, 80)
-            end
-            local tweenInfo = TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
-            TweenService:Create(dot, tweenInfo, { Position = targetPos, BackgroundColor3 = targetColor }):Play()
-            TweenService:Create(toggleBtn, tweenInfo, { BackgroundColor3 = bgColor }):Play()
-        end
-
-        updateVisual(state)
-
-        toggleBtn.MouseButton1Click:Connect(function()
-            state = not state
-            callback(state)
-            updateVisual(state)
+    local function createCategoryButton(text, targetFrame)
+        local btn = Instance.new("TextButton")
+        btn.Size = UDim2.new(1, 0, 0, 35)
+        btn.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+        btn.Text = text
+        btn.TextColor3 = Color3.new(1, 1, 1)
+        btn.Font = Enum.Font.SourceSans
+        btn.TextSize = 18
+        btn.Parent = LeftPanel
+        btn.MouseButton1Click:Connect(function()
+            SettingsFrame.Visible = (targetFrame == SettingsFrame)
+            ESPFrame.Visible = (targetFrame == ESPFrame)
         end)
-
-        return row
+        return btn
     end
 
-    createRow("Player ESP", PlayerESPEnabled, function(value)
-        PlayerESPEnabled = value
-        refreshTargets()
-    end)
+    local settingsBtn = createCategoryButton("⚙️Settings⚙️", SettingsFrame)
+    local espBtn = createCategoryButton("👁️ESP👁️", ESPFrame)
 
-    createRow("NPCs ESP", NPCESPEnabled, function(value)
-        NPCESPEnabled = value
-        refreshTargets()
-    end)
+    local function createSettingsContent()
+        local container = Instance.new("Frame")
+        container.Size = UDim2.new(1, -20, 1, -10)
+        container.Position = UDim2.new(0, 10, 0, 5)
+        container.BackgroundTransparency = 1
+        container.Parent = SettingsFrame
+
+        local layout = Instance.new("UIListLayout")
+        layout.FillDirection = Enum.FillDirection.Vertical
+        layout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+        layout.VerticalAlignment = Enum.VerticalAlignment.Top
+        layout.Padding = UDim.new(0, 5)
+        layout.Parent = container
+
+        local function createRow(labelText, initialState, callback)
+            local row = Instance.new("Frame")
+            row.Size = UDim2.new(1, 0, 0, 30)
+            row.BackgroundTransparency = 1
+            row.Parent = container
+
+            local label = Instance.new("TextLabel")
+            label.Size = UDim2.new(0.7, -10, 1, 0)
+            label.Position = UDim2.new(0, 0, 0, 0)
+            label.BackgroundTransparency = 1
+            label.Text = labelText
+            label.TextColor3 = Color3.new(1, 1, 1)
+            label.Font = Enum.Font.SourceSans
+            label.TextSize = 16
+            label.TextXAlignment = Enum.TextXAlignment.Left
+            label.Parent = row
+
+            local toggleBtn = Instance.new("TextButton")
+            toggleBtn.Size = UDim2.new(0, 50, 0, 26)
+            toggleBtn.Position = UDim2.new(1, -50, 0.5, -13)
+            toggleBtn.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
+            toggleBtn.Text = ""
+            toggleBtn.Parent = row
+
+            local toggleCorner = Instance.new("UICorner")
+            toggleCorner.CornerRadius = UDim.new(0, 4)
+            toggleCorner.Parent = toggleBtn
+
+            local dot = Instance.new("Frame")
+            dot.Size = UDim2.new(0, 22, 0, 22)
+            dot.Position = UDim2.new(0, 2, 0.5, -11)
+            dot.BackgroundColor3 = Color3.fromRGB(120, 120, 120)
+            dot.BorderSizePixel = 0
+            dot.Parent = toggleBtn
+
+            local dotCorner = Instance.new("UICorner")
+            dotCorner.CornerRadius = UDim.new(1, 0)
+            dotCorner.Parent = dot
+
+            local state = initialState
+
+            local function updateVisual(isOn)
+                local targetPos, targetColor, bgColor
+                if isOn then
+                    targetPos = UDim2.new(1, -24, 0.5, -11)
+                    targetColor = Color3.fromRGB(255, 255, 255)
+                    bgColor = Color3.fromRGB(46, 204, 113)
+                else
+                    targetPos = UDim2.new(0, 2, 0.5, -11)
+                    targetColor = Color3.fromRGB(120, 120, 120)
+                    bgColor = Color3.fromRGB(80, 80, 80)
+                end
+                local tweenInfo = TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+                TweenService:Create(dot, tweenInfo, { Position = targetPos, BackgroundColor3 = targetColor }):Play()
+                TweenService:Create(toggleBtn, tweenInfo, { BackgroundColor3 = bgColor }):Play()
+            end
+
+            updateVisual(state)
+
+            toggleBtn.MouseButton1Click:Connect(function()
+                state = not state
+                callback(state)
+                updateVisual(state)
+            end)
+
+            return row
+        end
+
+        createRow("Fullbright", FullbrightEnabled, function(value)
+            FullbrightEnabled = value
+            applyFullbright(value)
+        end)
+    end
+
+    createSettingsContent()
+
+    local function createESPContent()
+        local container = Instance.new("Frame")
+        container.Size = UDim2.new(1, -20, 1, -10)
+        container.Position = UDim2.new(0, 10, 0, 5)
+        container.BackgroundTransparency = 1
+        container.Parent = ESPFrame
+
+        local layout = Instance.new("UIListLayout")
+        layout.FillDirection = Enum.FillDirection.Vertical
+        layout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+        layout.VerticalAlignment = Enum.VerticalAlignment.Top
+        layout.Padding = UDim.new(0, 5)
+        layout.Parent = container
+
+        local function createRow(labelText, initialState, callback)
+            local row = Instance.new("Frame")
+            row.Size = UDim2.new(1, 0, 0, 30)
+            row.BackgroundTransparency = 1
+            row.Parent = container
+
+            local label = Instance.new("TextLabel")
+            label.Size = UDim2.new(0.7, -10, 1, 0)
+            label.Position = UDim2.new(0, 0, 0, 0)
+            label.BackgroundTransparency = 1
+            label.Text = labelText
+            label.TextColor3 = Color3.new(1, 1, 1)
+            label.Font = Enum.Font.SourceSans
+            label.TextSize = 16
+            label.TextXAlignment = Enum.TextXAlignment.Left
+            label.Parent = row
+
+            local toggleBtn = Instance.new("TextButton")
+            toggleBtn.Size = UDim2.new(0, 50, 0, 26)
+            toggleBtn.Position = UDim2.new(1, -50, 0.5, -13)
+            toggleBtn.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
+            toggleBtn.Text = ""
+            toggleBtn.Parent = row
+
+            local toggleCorner = Instance.new("UICorner")
+            toggleCorner.CornerRadius = UDim.new(0, 4)
+            toggleCorner.Parent = toggleBtn
+
+            local dot = Instance.new("Frame")
+            dot.Size = UDim2.new(0, 22, 0, 22)
+            dot.Position = UDim2.new(0, 2, 0.5, -11)
+            dot.BackgroundColor3 = Color3.fromRGB(120, 120, 120)
+            dot.BorderSizePixel = 0
+            dot.Parent = toggleBtn
+
+            local dotCorner = Instance.new("UICorner")
+            dotCorner.CornerRadius = UDim.new(1, 0)
+            dotCorner.Parent = dot
+
+            local state = initialState
+
+            local function updateVisual(isOn)
+                local targetPos, targetColor, bgColor
+                if isOn then
+                    targetPos = UDim2.new(1, -24, 0.5, -11)
+                    targetColor = Color3.fromRGB(255, 255, 255)
+                    bgColor = Color3.fromRGB(46, 204, 113)
+                else
+                    targetPos = UDim2.new(0, 2, 0.5, -11)
+                    targetColor = Color3.fromRGB(120, 120, 120)
+                    bgColor = Color3.fromRGB(80, 80, 80)
+                end
+                local tweenInfo = TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+                TweenService:Create(dot, tweenInfo, { Position = targetPos, BackgroundColor3 = targetColor }):Play()
+                TweenService:Create(toggleBtn, tweenInfo, { BackgroundColor3 = bgColor }):Play()
+            end
+
+            updateVisual(state)
+
+            toggleBtn.MouseButton1Click:Connect(function()
+                state = not state
+                callback(state)
+                updateVisual(state)
+            end)
+
+            return row
+        end
+
+        createRow("Player ESP", PlayerESPEnabled, function(value)
+            PlayerESPEnabled = value
+            refreshTargets()
+        end)
+
+        createRow("NPCs ESP", NPCESPEnabled, function(value)
+            NPCESPEnabled = value
+            refreshTargets()
+        end)
+    end
+
+    createESPContent()
 
     MinButton.MouseButton1Click:Connect(function()
         UIMinimized = not UIMinimized
