@@ -1,4 +1,3 @@
--- 服务
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
@@ -6,11 +5,9 @@ local UserInputService = game:GetService("UserInputService")
 
 local LocalPlayer = Players.LocalPlayer
 
--- 状态
 local ESPEnabled = false
 local UIMinimized = false
 
--- ESP 功能
 local function updateESP(player)
     if player == LocalPlayer then return end
     if not player.Character then return end
@@ -26,10 +23,10 @@ local function updateESP(player)
             hl.Parent = char
         end
         hl.FillTransparency = 0.5
-        hl.FillColor = Color3.fromRGB(128, 0, 255)   -- 紫色
+        hl.FillColor = Color3.fromRGB(128, 0, 255)
         hl.OutlineTransparency = 0
-        hl.OutlineColor = Color3.new(1, 1, 1)       -- 白色描边
-        hl.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop  -- 无距离限制
+        hl.OutlineColor = Color3.new(1, 1, 1)
+        hl.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
         hl.Enabled = true
     else
         if hl then
@@ -44,7 +41,6 @@ local function rescanAll()
     end
 end
 
--- 玩家事件
 for _, player in pairs(Players:GetPlayers()) do
     player.CharacterAdded:Connect(function()
         wait(0.5)
@@ -72,7 +68,6 @@ RunService.RenderStepped:Connect(function()
     end
 end)
 
--- UI 创建
 local function createUI()
     if LocalPlayer.PlayerGui:FindFirstChild("BackroomsSurvivalUI") then
         return
@@ -96,7 +91,6 @@ local function createUI()
     UICorner.CornerRadius = UDim.new(0, 8)
     UICorner.Parent = MainFrame
 
-    -- 标题栏（可拖动）
     local TitleBar = Instance.new("Frame")
     TitleBar.Name = "TitleBar"
     TitleBar.Size = UDim2.new(1, 0, 0, 50)
@@ -108,7 +102,6 @@ local function createUI()
     TitleBarCorner.CornerRadius = UDim.new(0, 8)
     TitleBarCorner.Parent = TitleBar
 
-    -- 主标题
     local Title = Instance.new("TextLabel")
     Title.Size = UDim2.new(1, -70, 0, 20)
     Title.Position = UDim2.new(0, 10, 0, 5)
@@ -121,7 +114,6 @@ local function createUI()
     Title.TextYAlignment = Enum.TextYAlignment.Top
     Title.Parent = TitleBar
 
-    -- 副标题
     local SubTitle = Instance.new("TextLabel")
     SubTitle.Size = UDim2.new(1, -70, 0, 15)
     SubTitle.Position = UDim2.new(0, 10, 0, 28)
@@ -134,7 +126,6 @@ local function createUI()
     SubTitle.TextYAlignment = Enum.TextYAlignment.Top
     SubTitle.Parent = TitleBar
 
-    -- 关闭按钮
     local CloseButton = Instance.new("TextButton")
     CloseButton.Size = UDim2.new(0, 30, 0, 30)
     CloseButton.Position = UDim2.new(1, -35, 0, 10)
@@ -150,7 +141,6 @@ local function createUI()
         ScreenGui:Destroy()
     end)
 
-    -- 最小化按钮
     local MinButton = Instance.new("TextButton")
     MinButton.Size = UDim2.new(0, 30, 0, 30)
     MinButton.Position = UDim2.new(1, -70, 0, 10)
@@ -161,7 +151,6 @@ local function createUI()
     MinButton.TextSize = 22
     MinButton.Parent = TitleBar
 
-    -- 内容容器
     local ContentContainer = Instance.new("Frame")
     ContentContainer.Name = "ContentContainer"
     ContentContainer.Size = UDim2.new(1, 0, 1, -50)
@@ -170,14 +159,12 @@ local function createUI()
     ContentContainer.ClipsDescendants = true
     ContentContainer.Parent = MainFrame
 
-    -- 左侧面板
     local LeftPanel = Instance.new("Frame")
     LeftPanel.Size = UDim2.new(0, 120, 1, 0)
     LeftPanel.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
     LeftPanel.BorderSizePixel = 0
     LeftPanel.Parent = ContentContainer
 
-    -- 右侧面板
     local RightPanel = Instance.new("Frame")
     RightPanel.Size = UDim2.new(1, -120, 1, 0)
     RightPanel.Position = UDim2.new(0, 120, 0, 0)
@@ -185,7 +172,6 @@ local function createUI()
     RightPanel.BorderSizePixel = 0
     RightPanel.Parent = ContentContainer
 
-    -- 分类按钮
     local ESPCatButton = Instance.new("TextButton")
     ESPCatButton.Size = UDim2.new(1, 0, 0, 35)
     ESPCatButton.Position = UDim2.new(0, 0, 0, 0)
@@ -199,7 +185,6 @@ local function createUI()
         ESPFrame.Visible = true
     end)
 
-    -- ESP 内容区
     local ESPFrame = Instance.new("Frame")
     ESPFrame.Size = UDim2.new(1, 0, 1, 0)
     ESPFrame.BackgroundTransparency = 1
@@ -219,7 +204,6 @@ local function createUI()
     ListLayout.Padding = UDim.new(0, 5)
     ListLayout.Parent = ListContainer
 
-    -- 创建一行开关
     local function createRow(labelText, initialState, callback)
         local row = Instance.new("Frame")
         row.Size = UDim2.new(1, 0, 0, 30)
@@ -288,13 +272,11 @@ local function createUI()
         return row
     end
 
-    -- 添加 Player ESP 开关
     createRow("Player ESP", ESPEnabled, function(value)
         ESPEnabled = value
         rescanAll()
     end)
 
-    -- 最小化逻辑
     MinButton.MouseButton1Click:Connect(function()
         UIMinimized = not UIMinimized
         local targetSize = UIMinimized and UDim2.new(0, 400, 0, 50) or UDim2.new(0, 400, 0, 250)
@@ -310,26 +292,26 @@ local function createUI()
         end
     end)
 
-    -- 拖动（使用 UserInputService 兼容鼠标和触摸）
     local dragging = false
     local dragOffset = Vector2.new()
 
     local function onInputBegan(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-            local pos = input.Position
+            local pos = Vector2.new(input.Position.X, input.Position.Y)
             local tbPos = TitleBar.AbsolutePosition
             local tbSize = TitleBar.AbsoluteSize
             if pos.X >= tbPos.X and pos.X <= tbPos.X + tbSize.X and
                pos.Y >= tbPos.Y and pos.Y <= tbPos.Y + tbSize.Y then
                 dragging = true
-                dragOffset = pos - MainFrame.AbsolutePosition
+                dragOffset = pos - Vector2.new(MainFrame.AbsolutePosition.X, MainFrame.AbsolutePosition.Y)
             end
         end
     end
 
     local function onInputChanged(input)
         if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
-            local newPos = input.Position - dragOffset
+            local pos = Vector2.new(input.Position.X, input.Position.Y)
+            local newPos = pos - dragOffset
             MainFrame.Position = UDim2.new(0, newPos.X, 0, newPos.Y)
         end
     end
