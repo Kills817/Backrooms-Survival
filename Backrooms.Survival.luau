@@ -144,4 +144,87 @@ local function updateESP(player)
 			hl.Adornee = char
 			hl.FillTransparency = 0.7
 			hl.OutlineTransparency = 0
-			hl.Outlin
+			hl.OutlineColor = Color3.new(1, 0, 0)
+			hl.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+			hl.Parent = char
+		end
+	else
+		if existing then
+			existing:Destroy()
+		end
+	end
+end
+
+local function rescanAll()
+	for _, p in pairs(Players:GetPlayers()) do
+		updateESP(p)
+	end
+end
+
+local function updateToggleVisual()
+	if ESPEnabled then
+		PlayerESPToggle.BackgroundColor3 = Color3.fromRGB(46, 204, 113)
+		ToggleDot.Position = UDim2.new(1, -24, 0.5, -11)
+		ToggleDot.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+	else
+		PlayerESPToggle.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
+		ToggleDot.Position = UDim2.new(0, 2, 0.5, -11)
+		ToggleDot.BackgroundColor3 = Color3.fromRGB(120, 120, 120)
+	end
+end
+
+PlayerESPToggle.MouseButton1Click:Connect(function()
+	ESPEnabled = not ESPEnabled
+	updateToggleVisual()
+	rescanAll()
+end)
+
+ESPButton.MouseButton1Click:Connect(function()
+	ESPFrame.Visible = true
+end)
+
+CloseButton.MouseButton1Click:Connect(function()
+	ScreenGui:Destroy()
+end)
+
+local UIMinimized = false
+
+ToggleUIButton.MouseButton1Click:Connect(function()
+	UIMinimized = not UIMinimized
+	local goal = UIMinimized and UDim2.new(0, 400, 0, 35) or UDim2.new(0, 400, 0, 250)
+	local tween = TweenService:Create(MainFrame, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Size = goal})
+	tween:Play()
+	ToggleUIButton.Text = UIMinimized and "+" or "-"
+	LeftPanel.Visible = not UIMinimized
+	RightPanel.Visible = not UIMinimized
+end)
+
+Players.PlayerAdded:Connect(function(p)
+	p.CharacterAdded:Connect(function()
+		task.wait(0.5)
+		updateESP(p)
+	end)
+end)
+
+for _, p in pairs(Players:GetPlayers()) do
+	p.CharacterAdded:Connect(function()
+		task.wait(0.5)
+		updateESP(p)
+	end)
+end
+
+RunService.RenderStepped:Connect(function()
+	if ESPEnabled then
+		for _, p in pairs(Players:GetPlayers()) do
+			if p ~= LocalPlayer and p.Character then
+				local hl = p.Character:FindFirstChild("BackroomsESP")
+				if hl then
+					hl.Enabled = true
+				end
+			end
+		end
+	end
+end)
+
+updateToggleVisual()
+ESPFrame.Visible = true
