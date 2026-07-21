@@ -7,11 +7,13 @@ local Lighting = game:GetService("Lighting")
 
 local LocalPlayer = Players.LocalPlayer
 
+-- ===== 状态变量 =====
 local PlayerESPEnabled = false
 local NPCESPEnabled = false
 local FullbrightEnabled = false
 local UIMinimized = false
 
+-- ===== Fullbright 功能（优化版） =====
 local function applyFullbright(enable)
     if enable then
         Lighting.Brightness = 2
@@ -28,26 +30,22 @@ local function applyFullbright(enable)
     end
 end
 
-Lighting.LightingChanged:Connect(function()
-    if FullbrightEnabled then
-        applyFullbright(true)
-    end
-end)
-
+-- ===== NPC 识别（基于 Workspace.NPCs） =====
 local function isNPCModel(model)
     if not model or not model:IsA("Model") then return false end
     if Players:GetPlayerFromCharacter(model) then return false end
-    if model:FindFirstChildOfClass("Humanoid") == nil then return false end
+    if not model:FindFirstChildOfClass("Humanoid") then return false end
     local parent = model.Parent
     while parent do
         if parent == Workspace then
-            return parent:FindFirstChild("NPCs") ~= nil
+            return Workspace:FindFirstChild("NPCs") ~= nil
         end
         parent = parent.Parent
     end
     return false
 end
 
+-- ===== ESP 标签管理 =====
 local function createTag(target)
     if target:FindFirstChild("ESPTag") then return end
     local tag = Instance.new("Folder")
@@ -105,6 +103,7 @@ local function removeTag(target)
     if tag then tag:Destroy() end
 end
 
+-- ===== 刷新所有目标（仅在开关切换或角色添加时调用） =====
 local function refreshTargets()
     for _, target in pairs(Workspace:GetDescendants()) do
         if target:IsA("Model") and target:FindFirstChildOfClass("Humanoid") then
@@ -128,6 +127,7 @@ local function refreshTargets()
     end
 end
 
+-- ===== 角色添加事件 =====
 local function onCharacterAdded(player)
     player.CharacterAdded:Connect(function()
         wait(0.5)
@@ -138,25 +138,11 @@ end
 for _, player in pairs(Players:GetPlayers()) do
     onCharacterAdded(player)
 end
-
 Players.PlayerAdded:Connect(onCharacterAdded)
 
-RunService.RenderStepped:Connect(function()
-    if not PlayerESPEnabled and not NPCESPEnabled then
-        for _, target in pairs(Workspace:GetDescendants()) do
-            if target:IsA("Model") and target:FindFirstChildOfClass("Humanoid") then
-                removeTag(target)
-            end
-        end
-        return
-    end
-    refreshTargets()
-end)
-
+-- ===== UI 创建 =====
 local function createUI()
-    if LocalPlayer.PlayerGui:FindFirstChild("BackroomsSurvivalUI") then
-        return
-    end
+    if LocalPlayer.PlayerGui:FindFirstChild("BackroomsSurvivalUI") then return end
 
     local ScreenGui = Instance.new("ScreenGui")
     ScreenGui.Name = "BackroomsSurvivalUI"
@@ -176,13 +162,13 @@ local function createUI()
     UICorner.CornerRadius = UDim.new(0, 8)
     UICorner.Parent = MainFrame
 
+    -- 标题栏
     local TitleBar = Instance.new("Frame")
     TitleBar.Name = "TitleBar"
     TitleBar.Size = UDim2.new(1, 0, 0, 50)
     TitleBar.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
     TitleBar.Active = true
     TitleBar.Parent = MainFrame
-
     local TitleBarCorner = Instance.new("UICorner")
     TitleBarCorner.CornerRadius = UDim.new(0, 8)
     TitleBarCorner.Parent = TitleBar
@@ -211,6 +197,7 @@ local function createUI()
     SubTitle.TextYAlignment = Enum.TextYAlignment.Top
     SubTitle.Parent = TitleBar
 
+    -- 关闭按钮
     local CloseButton = Instance.new("TextButton")
     CloseButton.Size = UDim2.new(0, 30, 0, 30)
     CloseButton.Position = UDim2.new(1, -35, 0, 10)
@@ -231,6 +218,7 @@ local function createUI()
         ScreenGui:Destroy()
     end)
 
+    -- 最小化按钮
     local MinButton = Instance.new("TextButton")
     MinButton.Size = UDim2.new(0, 30, 0, 30)
     MinButton.Position = UDim2.new(1, -70, 0, 10)
@@ -241,6 +229,7 @@ local function createUI()
     MinButton.TextSize = 22
     MinButton.Parent = TitleBar
 
+    -- 内容容器
     local ContentContainer = Instance.new("Frame")
     ContentContainer.Name = "ContentContainer"
     ContentContainer.Size = UDim2.new(1, 0, 1, -50)
@@ -249,12 +238,14 @@ local function createUI()
     ContentContainer.ClipsDescendants = true
     ContentContainer.Parent = MainFrame
 
+    -- 左侧面板（固定按钮）
     local LeftPanel = Instance.new("Frame")
     LeftPanel.Size = UDim2.new(0, 120, 1, 0)
     LeftPanel.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
     LeftPanel.BorderSizePixel = 0
     LeftPanel.Parent = ContentContainer
 
+    -- 右侧面板（内容区域）
     local RightPanel = Instance.new("Frame")
     RightPanel.Size = UDim2.new(1, -120, 1, 0)
     RightPanel.Position = UDim2.new(0, 120, 0, 0)
@@ -262,6 +253,7 @@ local function createUI()
     RightPanel.BorderSizePixel = 0
     RightPanel.Parent = ContentContainer
 
+    -- 两个内容帧
     local SettingsFrame = Instance.new("Frame")
     SettingsFrame.Size = UDim2.new(1, 0, 1, 0)
     SettingsFrame.BackgroundTransparency = 1
@@ -274,9 +266,11 @@ local function createUI()
     ESPFrame.Visible = false
     ESPFrame.Parent = RightPanel
 
-    local function createCategoryButton(text, targetFrame)
+    -- 左侧分类按钮（使用固定位置）
+    local function createCategoryButton(text, targetFrame, yPos)
         local btn = Instance.new("TextButton")
         btn.Size = UDim2.new(1, 0, 0, 35)
+        btn.Position = UDim2.new(0, 0, 0, yPos)
         btn.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
         btn.Text = text
         btn.TextColor3 = Color3.new(1, 1, 1)
@@ -290,10 +284,11 @@ local function createUI()
         return btn
     end
 
-    createCategoryButton("⚙️Settings⚙️", SettingsFrame)
-    createCategoryButton("👁️ESP👁️", ESPFrame)
+    createCategoryButton("⚙️Settings⚙️", SettingsFrame, 0)
+    createCategoryButton("👁️ESP👁️", ESPFrame, 40)  -- 间隔 5
 
-    local function createSettingsContent()
+    -- ===== Settings 内容 =====
+    local function buildSettings()
         local container = Instance.new("Frame")
         container.Size = UDim2.new(1, -20, 1, -10)
         container.Position = UDim2.new(0, 10, 0, 5)
@@ -371,8 +366,6 @@ local function createUI()
                 callback(state)
                 updateVisual(state)
             end)
-
-            return row
         end
 
         createRow("Fullbright", FullbrightEnabled, function(value)
@@ -380,10 +373,10 @@ local function createUI()
             applyFullbright(value)
         end)
     end
+    buildSettings()
 
-    createSettingsContent()
-
-    local function createESPContent()
+    -- ===== ESP 内容 =====
+    local function buildESP()
         local container = Instance.new("Frame")
         container.Size = UDim2.new(1, -20, 1, -10)
         container.Position = UDim2.new(0, 10, 0, 5)
@@ -461,8 +454,6 @@ local function createUI()
                 callback(state)
                 updateVisual(state)
             end)
-
-            return row
         end
 
         createRow("Player ESP", PlayerESPEnabled, function(value)
@@ -475,9 +466,9 @@ local function createUI()
             refreshTargets()
         end)
     end
+    buildESP()
 
-    createESPContent()
-
+    -- ===== 最小化/展开 =====
     MinButton.MouseButton1Click:Connect(function()
         UIMinimized = not UIMinimized
         local targetSize = UIMinimized and UDim2.new(0, 400, 0, 50) or UDim2.new(0, 400, 0, 250)
@@ -493,6 +484,7 @@ local function createUI()
         end
     end)
 
+    -- ===== 拖动（标题栏） =====
     local dragging = false
     local dragOffset = Vector2.new()
 
