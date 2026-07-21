@@ -4,7 +4,6 @@ local UserInputService = game:GetService("UserInputService")
 local Workspace = game:GetService("Workspace")
 local Lighting = game:GetService("Lighting")
 local RunService = game:GetService("RunService")
-local Clipboard = game:GetService("Clipboard")
 
 local LocalPlayer = Players.LocalPlayer
 
