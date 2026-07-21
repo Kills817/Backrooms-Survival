@@ -13,8 +13,8 @@ local FullbrightEnabled = false
 local UIMinimized = false
 local refreshPending = false
 
--- 缓存当前激活的 ESP 目标列表
 local activeTagTargets = {}
+local tagCreationTime = {}  -- 记录标签创建时间
 
 -- ===== Fullbright =====
 local function applyFullbright(enable)
@@ -53,7 +53,7 @@ local function isNPCModel(model)
     return false
 end
 
--- ===== ESP 标签创建 =====
+-- ===== ESP 标签 =====
 local function createTag(target)
     if target:FindFirstChild("ESPTag") then return end
     
@@ -94,8 +94,12 @@ local function createTag(target)
     label.Text = "Loading..."
     label.Parent = billboard
 
-    -- 加入缓存列表
-    table.insert(activeTagTargets, target)
+    -- 记录创建时间
+    tagCreationTime[target] = tick()
+    -- 加入缓存
+    if not activeTagTargets[target] then
+        table.insert(activeTagTargets, target)
+    end
 end
 
 local function updateTag(target)
@@ -113,7 +117,6 @@ local function updateTag(target)
     
     local rootPart = target:FindFirstChild("HumanoidRootPart") or target:FindFirstChild("Head")
     if not rootPart then
-        -- 删除无效标签
         removeTag(target)
         return
     end
@@ -144,15 +147,18 @@ local function removeTag(target)
                 break
             end
         end
+        tagCreationTime[target] = nil
         tag:Destroy()
     end
 end
 
 local function clearAllESP()
     for _, target in pairs(activeTagTargets) do
-        removeTag(target)
+        local tag = target:FindFirstChild("ESPTag")
+        if tag then tag:Destroy() end
     end
     activeTagTargets = {}
+    tagCreationTime = {}
 end
 
 local function refreshTargets()
@@ -160,7 +166,7 @@ local function refreshTargets()
     refreshPending = true
     task.delay(0.1, function()
         refreshPending = false
-        -- 先清理所有现有标签（因为开关状态可能变化）
+        -- 先移除当前所有标签（因为开关状态可能变化）
         clearAllESP()
         
         for _, target in pairs(Workspace:GetDescendants()) do
@@ -182,29 +188,49 @@ local function refreshTargets()
     end)
 end
 
--- 实时更新：每 2 帧更新一次已有标签的距离
+-- 实时更新：每2帧更新一次所有标签，并清理无效标签
 local frameCounter = 0
 RunService.Heartbeat:Connect(function()
     frameCounter = frameCounter + 1
-    if frameCounter % 2 ~= 0 then return end  -- 每2帧执行一次
+    if frameCounter % 2 ~= 0 then return end
+    
     if not PlayerESPEnabled and not NPCESPEnabled then
-        -- 如果所有ESP关闭，清空缓存并移除所有标签
         if #activeTagTargets > 0 then
             clearAllESP()
         end
         return
     end
-    -- 只更新缓存中的目标
+    
+    local now = tick()
     local toRemove = {}
     for i, target in ipairs(activeTagTargets) do
         if target and target:IsA("Model") and target:FindFirstChild("ESPTag") then
+            -- 更新标签文本
             updateTag(target)
+            -- 检查标签文本是否仍然无效，且超时
+            local tag = target:FindFirstChild("ESPTag")
+            if tag then
+                local billboard = tag:FindFirstChild("Billboard")
+                if billboard then
+                    local label = billboard:FindFirstChild("Label")
+                    if label then
+                        local text = label.Text
+                        if text == "Loading..." or text == "Waiting..." or text == "Unknown" or text == "No Root" then
+                            local createTime = tagCreationTime[target]
+                            if createTime and now - createTime > 3 then
+                                table.insert(toRemove, i)
+                            end
+                        end
+                    end
+                end
+            end
         else
-            -- 无效目标，标记移除
+            -- 目标无效，标记移除
             table.insert(toRemove, i)
         end
     end
-    -- 从后往前移除无效目标
+    
+    -- 从后往前移除
     for i = #toRemove, 1, -1 do
         local idx = toRemove[i]
         if activeTagTargets[idx] then
@@ -225,7 +251,11 @@ for _, player in pairs(Players:GetPlayers()) do
 end
 Players.PlayerAdded:Connect(onCharacterAdded)
 
--- ===== UI 创建（与之前相同） =====
+-- ===== UI 创建（与之前相同，此处省略但保留） =====
+-- [完整 UI 代码，与之前版本一致，确保 createUI 函数完整]
+-- 由于篇幅，UI 部分不变，继续使用之前的 UI 代码。
+-- 以下为 createUI 的完整实现（与之前版本完全相同，但为了完整性粘贴）
+
 local function createUI()
     if LocalPlayer.PlayerGui:FindFirstChild("BackroomsSurvivalUI") then return end
 
