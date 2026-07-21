@@ -9,10 +9,6 @@ local LocalPlayer = Players.LocalPlayer
 -- State
 local ESPEnabled = false
 local UIMinimized = false
-local TweenDotAnimation = nil
-local Dragging = false
-local DragStart = nil
-local DragOffset = nil
 
 -- ESP Logic
 local function updateESP(player: Player)
@@ -30,9 +26,9 @@ local function updateESP(player: Player)
             hl.Parent = char
         end
         hl.FillTransparency = 0.5
-        hl.FillColor = Color3.fromRGB(128, 0, 255)
+        hl.FillColor = Color3.fromRGB(128, 0, 255)      -- Purple
         hl.OutlineTransparency = 0
-        hl.OutlineColor = Color3.new(1, 1, 1)
+        hl.OutlineColor = Color3.new(1, 1, 1)           -- White outline
         hl.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
         hl.DistanceMode = Enum.HighlightDistanceMode.AlwaysOnTop
         hl.Enabled = true
@@ -94,7 +90,7 @@ local function createUI()
     UICorner.CornerRadius = UDim.new(0, 8)
     UICorner.Parent = MainFrame
 
-    -- Title Bar (Height 50)
+    -- Title Bar (height 50)
     local TitleBar = Instance.new("Frame")
     TitleBar.Size = UDim2.new(1, 0, 0, 50)
     TitleBar.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
@@ -117,13 +113,13 @@ local function createUI()
     Title.TextYAlignment = Enum.TextYAlignment.Top
     Title.Parent = TitleBar
 
-    -- Subtitle (made brighter)
+    -- Subtitle
     local SubTitle = Instance.new("TextLabel")
     SubTitle.Size = UDim2.new(1, -70, 0, 15)
     SubTitle.Position = UDim2.new(0, 10, 0, 28)
     SubTitle.BackgroundTransparency = 1
-    SubTitle.Text = "Testing, made by F-197"
-    SubTitle.TextColor3 = Color3.fromRGB(210, 210, 210)   -- brighter gray
+    SubTitle.Text = "Testing, make by F-197"
+    SubTitle.TextColor3 = Color3.fromRGB(210, 210, 210)
     SubTitle.Font = Enum.Font.SourceSans
     SubTitle.TextSize = 12
     SubTitle.TextXAlignment = Enum.TextXAlignment.Left
@@ -141,7 +137,6 @@ local function createUI()
     CloseButton.TextSize = 18
     CloseButton.Parent = TitleBar
     CloseButton.MouseButton1Click:Connect(function()
-        -- Disable all features and cleanup
         ESPEnabled = false
         rescanAll()
         ScreenGui:Destroy()
@@ -165,32 +160,42 @@ local function createUI()
         ToggleUIButton.Text = UIMinimized and "+" or "-"
         LeftPanel.Visible = not UIMinimized
         RightPanel.Visible = not UIMinimized
+        if UIMinimized then
+            LeftPanel.Size = UDim2.new(0, 0, 0, 0)
+            RightPanel.Size = UDim2.new(0, 0, 0, 0)
+        else
+            LeftPanel.Size = UDim2.new(0, 120, 1, -50)
+            RightPanel.Size = UDim2.new(1, -120, 1, -50)
+        end
     end)
 
-    -- Drag functionality (restored)
+    -- Drag functionality (mouse + touch compatible)
+    local dragging = false
+    local dragOffset = Vector2.new()
+
     local function startDrag(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 then
-            Dragging = true
-            DragOffset = input.Position - MainFrame.AbsolutePosition
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            dragging = true
+            dragOffset = input.Position - MainFrame.AbsolutePosition
         end
     end
 
     local function updateDrag(input)
-        if Dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
-            local newPos = input.Position - DragOffset
+        if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+            local newPos = input.Position - dragOffset
             MainFrame.Position = UDim2.new(0, newPos.X, 0, newPos.Y)
         end
     end
 
-    local function stopDrag(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 then
-            Dragging = false
+    local function endDrag(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            dragging = false
         end
     end
 
-    TitleBar.InputBegan:Connect(startDrag)
+    UserInputService.InputBegan:Connect(startDrag)
     UserInputService.InputChanged:Connect(updateDrag)
-    UserInputService.InputEnded:Connect(stopDrag)
+    UserInputService.InputEnded:Connect(endDrag)
 
     -- Left Panel
     local LeftPanel = Instance.new("Frame")
@@ -211,7 +216,7 @@ local function createUI()
     -- Category Buttons (Left)
     local ESPButton = Instance.new("TextButton")
     ESPButton.Size = UDim2.new(1, 0, 0, 35)
-    ESPButton.Position = UDim2.new(0, 0, 0, 0)  -- top aligned
+    ESPButton.Position = UDim2.new(0, 0, 0, 0)
     ESPButton.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
     ESPButton.Text = "ESP"
     ESPButton.TextColor3 = Color3.new(1, 1, 1)
@@ -226,10 +231,9 @@ local function createUI()
     local ESPFrame = Instance.new("Frame")
     ESPFrame.Size = UDim2.new(1, 0, 1, 0)
     ESPFrame.BackgroundTransparency = 1
-    ESPFrame.Visible = true   -- show by default
+    ESPFrame.Visible = true
     ESPFrame.Parent = RightPanel
 
-    -- List container for features (for alignment and future expansion)
     local ListContainer = Instance.new("Frame")
     ListContainer.Size = UDim2.new(1, -20, 1, -10)
     ListContainer.Position = UDim2.new(0, 10, 0, 5)
@@ -243,10 +247,10 @@ local function createUI()
     ListLayout.Padding = UDim.new(0, 5)
     ListLayout.Parent = ListContainer
 
-    -- Feature row: Player ESP
+    -- Helper: create a toggle row
     local function createFeatureRow(labelText, initialState, onToggle)
         local row = Instance.new("Frame")
-    row.Size = UDim2.new(1, 0, 0, 30)
+        row.Size = UDim2.new(1, 0, 0, 30)
         row.BackgroundTransparency = 1
         row.Parent = ListContainer
 
@@ -283,6 +287,8 @@ local function createUI()
         dotCorner.CornerRadius = UDim.new(1, 0)
         dotCorner.Parent = dot
 
+        local currentState = initialState
+
         local function updateVisual(state)
             local targetPos, targetColor, bgColor
             if state then
@@ -294,13 +300,9 @@ local function createUI()
                 targetColor = Color3.fromRGB(120, 120, 120)
                 bgColor = Color3.fromRGB(80, 80, 80)
             end
-            -- Cancel any ongoing tween on this dot
-            local existingTween = dot:GetAttribute("Tween")
-            if existingTween then existingTween:Cancel() end
             local tweenInfo = TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
-            local tween = TweenService:Create(dot, tweenInfo, { Position = targetPos, BackgroundColor3 = targetColor })
-            tween:Play()
-            dot:SetAttribute("Tween", tween)
+            local dotTween = TweenService:Create(dot, tweenInfo, { Position = targetPos, BackgroundColor3 = targetColor })
+            dotTween:Play()
             local bgTween = TweenService:Create(toggleBtn, tweenInfo, { BackgroundColor3 = bgColor })
             bgTween:Play()
         end
@@ -308,25 +310,20 @@ local function createUI()
         updateVisual(initialState)
 
         toggleBtn.MouseButton1Click:Connect(function()
-            local newState = not initialState
-            initialState = newState   -- update closure variable
-            onToggle(newState)
-            updateVisual(newState)
+            currentState = not currentState
+            onToggle(currentState)
+            updateVisual(currentState)
         end)
 
         return row, toggleBtn, dot
     end
 
     -- Create Player ESP row
-    local playerESPRow, playerESPToggle, playerESPDot = createFeatureRow("Player ESP", ESPEnabled, function(state)
+    createFeatureRow("Player ESP", ESPEnabled, function(state)
         ESPEnabled = state
         rescanAll()
     end)
 
-    -- Expose for global state updates if needed (we keep ESPEnabled variable global)
-
-    -- Force initial state sync
-    -- (already set via ESPEnabled initial false, but if we want to sync)
     return ScreenGui, MainFrame
 end
 
