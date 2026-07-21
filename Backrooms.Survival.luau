@@ -122,7 +122,7 @@ local function createUI()
     SubTitle.Size = UDim2.new(1, -70, 0, 15)
     SubTitle.Position = UDim2.new(0, 10, 0, 28)
     SubTitle.BackgroundTransparency = 1
-    SubTitle.Text = "Testing, make by F-197"
+    SubTitle.Text = "Testing, made by F-197"
     SubTitle.TextColor3 = Color3.fromRGB(210, 210, 210)   -- brighter gray
     SubTitle.Font = Enum.Font.SourceSans
     SubTitle.TextSize = 12
