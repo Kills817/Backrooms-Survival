@@ -3,6 +3,7 @@ local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
 local Workspace = game:GetService("Workspace")
 local Lighting = game:GetService("Lighting")
+local RunService = game:GetService("RunService")
 
 local LocalPlayer = Players.LocalPlayer
 
@@ -12,6 +13,7 @@ local FullbrightEnabled = false
 local UIMinimized = false
 local refreshPending = false
 
+-- ===== Fullbright =====
 local function applyFullbright(enable)
     if enable then
         Lighting.Brightness = 2
@@ -28,6 +30,13 @@ local function applyFullbright(enable)
     end
 end
 
+Lighting.LightingChanged:Connect(function()
+    if FullbrightEnabled then
+        applyFullbright(true)
+    end
+end)
+
+-- ===== NPC 识别 =====
 local NPCsFolder = Workspace:FindFirstChild("NPCs")
 local function isNPCModel(model)
     if not model or not model:IsA("Model") then return false end
@@ -41,6 +50,7 @@ local function isNPCModel(model)
     return false
 end
 
+-- ===== ESP 标签 =====
 local function createTag(target)
     if target:FindFirstChild("ESPTag") then return end
     
@@ -78,7 +88,7 @@ local function createTag(target)
     label.TextWrapped = true
     label.TextXAlignment = Enum.TextXAlignment.Center
     label.TextYAlignment = Enum.TextYAlignment.Center
-    label.Text = "Loading..."  -- 初始占位
+    label.Text = "Loading..."
     label.Parent = billboard
 end
 
@@ -90,21 +100,25 @@ local function updateTag(target)
     local label = billboard:FindFirstChild("Label")
     if not label then return end
     
+    if not LocalPlayer.Character then
+        label.Text = "Waiting..."
+        return
+    end
+    
     local rootPart = target:FindFirstChild("HumanoidRootPart") or target:FindFirstChild("Head")
-    if not rootPart or not LocalPlayer.Character then
-        removeTag(target)
+    if not rootPart then
+        label.Text = "No Root"
         return
     end
     
     local primaryPart = LocalPlayer.Character:FindFirstChild("HumanoidRootPart") or LocalPlayer.Character:FindFirstChild("Head")
     if not primaryPart then
-        removeTag(target)
+        label.Text = "No Root"
         return
     end
     
     local distance = (rootPart.Position - primaryPart.Position).Magnitude
     local name = target.Name
-    
     local player = Players:GetPlayerFromCharacter(target)
     if player then
         name = player.Name
@@ -126,31 +140,32 @@ local function clearAllESP()
     end
 end
 
-local function refreshTargets()
-    if refreshPending then return end
-    refreshPending = true
-    task.delay(0.1, function()
-        refreshPending = false
-        -- 先清理无效标签（文本为 Label、Unknown 或 Loading...）
-        for _, target in pairs(Workspace:GetDescendants()) do
-            if target:IsA("Model") then
-                local tag = target:FindFirstChild("ESPTag")
-                if tag then
-                    local billboard = tag:FindFirstChild("Billboard")
-                    if billboard then
-                        local label = billboard:FindFirstChild("Label")
-                        if label then
-                            local text = label.Text
-                            if text == "Label" or text == "Unknown" or text == "Loading..." then
-                                removeTag(target)
-                            end
+local function cleanInvalidTags()
+    for _, target in pairs(Workspace:GetDescendants()) do
+        if target:IsA("Model") then
+            local tag = target:FindFirstChild("ESPTag")
+            if tag then
+                local billboard = tag:FindFirstChild("Billboard")
+                if billboard then
+                    local label = billboard:FindFirstChild("Label")
+                    if label then
+                        local text = label.Text
+                        if text == "Label" or text == "Unknown" or text == "Loading..." or text == "No Root" or text == "Waiting..." then
+                            removeTag(target)
                         end
                     end
                 end
             end
         end
-        
-        -- 重新扫描并创建有效标签
+    end
+end
+
+local function refreshTargets()
+    if refreshPending then return end
+    refreshPending = true
+    task.delay(0.1, function()
+        refreshPending = false
+        cleanInvalidTags()
         for _, target in pairs(Workspace:GetDescendants()) do
             if target:IsA("Model") and target:FindFirstChildOfClass("Humanoid") then
                 local isPlayer = Players:GetPlayerFromCharacter(target)
@@ -174,6 +189,21 @@ local function refreshTargets()
     end)
 end
 
+-- 实时更新：每帧更新已有标签的距离
+RunService.Heartbeat:Connect(function()
+    if not PlayerESPEnabled and not NPCESPEnabled then
+        return
+    end
+    for _, target in pairs(Workspace:GetDescendants()) do
+        if target:IsA("Model") then
+            local tag = target:FindFirstChild("ESPTag")
+            if tag then
+                updateTag(target)
+            end
+        end
+    end
+end)
+
 local function onCharacterAdded(player)
     player.CharacterAdded:Connect(function()
         task.wait(0.5)
@@ -186,6 +216,7 @@ for _, player in pairs(Players:GetPlayers()) do
 end
 Players.PlayerAdded:Connect(onCharacterAdded)
 
+-- ===== UI 创建 =====
 local function createUI()
     if LocalPlayer.PlayerGui:FindFirstChild("BackroomsSurvivalUI") then return end
 
@@ -231,7 +262,7 @@ local function createUI()
     Title.TextYAlignment = Enum.TextYAlignment.Top
     Title.Parent = TitleBar
 
-    -- Subtitle (version updated)
+    -- Subtitle
     local SubTitle = Instance.new("TextLabel")
     SubTitle.Size = UDim2.new(1, -70, 0, 15)
     SubTitle.Position = UDim2.new(0, 10, 0, 28)
@@ -285,14 +316,14 @@ local function createUI()
     ContentContainer.ClipsDescendants = true
     ContentContainer.Parent = MainFrame
 
-    -- Left Panel (categories)
+    -- Left Panel
     local LeftPanel = Instance.new("Frame")
     LeftPanel.Size = UDim2.new(0, 120, 1, 0)
     LeftPanel.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
     LeftPanel.BorderSizePixel = 0
     LeftPanel.Parent = ContentContainer
 
-    -- Right Panel (content)
+    -- Right Panel
     local RightPanel = Instance.new("Frame")
     RightPanel.Size = UDim2.new(1, -120, 1, 0)
     RightPanel.Position = UDim2.new(0, 120, 0, 0)
@@ -300,7 +331,7 @@ local function createUI()
     RightPanel.BorderSizePixel = 0
     RightPanel.Parent = ContentContainer
 
-    -- Scrolling frames for each category (with scrollbar)
+    -- Scrolling frames
     local function createScrollingFrame(name)
         local sc = Instance.new("ScrollingFrame")
         sc.Name = name
@@ -312,7 +343,6 @@ local function createUI()
         sc.CanvasSize = UDim2.new(0, 0, 0, 0)
         sc.ClipsDescendants = true
         sc.Parent = RightPanel
-        -- Container for content
         local container = Instance.new("Frame")
         container.Name = "Container"
         container.Size = UDim2.new(1, -20, 0, 0)
@@ -363,7 +393,7 @@ local function createUI()
     createCategoryButton("⚙️Settings⚙️", SettingsScroller, 0)
     createCategoryButton("👁️ESP👁️", ESPScroller, 40)
 
-    -- Build Settings content
+    -- Build Settings
     local function buildSettings()
         local function createRow(labelText, initialState, callback)
             local row = Instance.new("Frame")
@@ -438,7 +468,7 @@ local function createUI()
     end
     buildSettings()
 
-    -- Build ESP content
+    -- Build ESP
     local function buildESP()
         local function createRow(labelText, initialState, callback)
             local row = Instance.new("Frame")
@@ -518,7 +548,7 @@ local function createUI()
     end
     buildESP()
 
-    -- Minimize/Expand
+    -- Minimize
     MinButton.MouseButton1Click:Connect(function()
         UIMinimized = not UIMinimized
         local targetSize = UIMinimized and UDim2.new(0, 400, 0, 50) or UDim2.new(0, 400, 0, 250)
