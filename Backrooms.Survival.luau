@@ -7,14 +7,37 @@ local RunService = game:GetService("RunService")
 
 local LocalPlayer = Players.LocalPlayer
 
--- ===== 状态 =====
+-- 状态
 local PlayerESPEnabled = false
 local NPCESPEnabled = false
 local FullbrightEnabled = false
 local NoclipEnabled = false
 local UIMinimized = false
 
--- ===== Noclip 功能 =====
+-- ===== Fullbright =====
+local function applyFullbright(enable)
+    if enable then
+        Lighting.Brightness = 2
+        Lighting.Ambient = Color3.new(1, 1, 1)
+        Lighting.OutdoorAmbient = Color3.new(1, 1, 1)
+        Lighting.FogEnd = 100000
+        Lighting.GlobalShadows = false
+    else
+        Lighting.Brightness = 1
+        Lighting.Ambient = Color3.new(0, 0, 0)
+        Lighting.OutdoorAmbient = Color3.new(0, 0, 0)
+        Lighting.FogEnd = 100000
+        Lighting.GlobalShadows = true
+    end
+end
+
+Lighting.LightingChanged:Connect(function()
+    if FullbrightEnabled then
+        applyFullbright(true)
+    end
+end)
+
+-- ===== Noclip =====
 local noclipConnection = nil
 
 local function toggleNoclip(enable)
@@ -56,29 +79,6 @@ LocalPlayer.CharacterAdded:Connect(function(char)
     end
 end)
 
--- ===== Fullbright =====
-local function applyFullbright(enable)
-    if enable then
-        Lighting.Brightness = 2
-        Lighting.Ambient = Color3.new(1, 1, 1)
-        Lighting.OutdoorAmbient = Color3.new(1, 1, 1)
-        Lighting.FogEnd = 100000
-        Lighting.GlobalShadows = false
-    else
-        Lighting.Brightness = 1
-        Lighting.Ambient = Color3.new(0, 0, 0)
-        Lighting.OutdoorAmbient = Color3.new(0, 0, 0)
-        Lighting.FogEnd = 100000
-        Lighting.GlobalShadows = true
-    end
-end
-
-Lighting.LightingChanged:Connect(function()
-    if FullbrightEnabled then
-        applyFullbright(true)
-    end
-end)
-
 -- ===== NPC 识别 =====
 local NPCsFolder = Workspace:FindFirstChild("NPCs")
 local function isNPCModel(model)
@@ -97,6 +97,22 @@ end
 local playerTags = {}
 local npcTags = {}
 local tagCreationTime = {}
+
+local function removeTag(target)
+    local tag = playerTags[target]
+    if tag then
+        tag:Destroy()
+        playerTags[target] = nil
+        tagCreationTime[target] = nil
+        return
+    end
+    tag = npcTags[target]
+    if tag then
+        tag:Destroy()
+        npcTags[target] = nil
+        tagCreationTime[target] = nil
+    end
+end
 
 local function createTag(target, isPlayer)
     local tagDict = isPlayer and playerTags or npcTags
@@ -143,35 +159,6 @@ local function createTag(target, isPlayer)
     tagCreationTime[target] = tick()
 end
 
-local function removeTag(target)
-    local tag = playerTags[target]
-    if tag then
-        tag:Destroy()
-        playerTags[target] = nil
-        tagCreationTime[target] = nil
-        return
-    end
-    tag = npcTags[target]
-    if tag then
-        tag:Destroy()
-        npcTags[target] = nil
-        tagCreationTime[target] = nil
-    end
-end
-
-local function clearAllESP()
-    for target, tag in pairs(playerTags) do
-        tag:Destroy()
-    end
-    for target, tag in pairs(npcTags) do
-        tag:Destroy()
-    end
-    playerTags = {}
-    npcTags = {}
-    tagCreationTime = {}
-end
-
--- ===== 更新标签 =====
 local function updateTag(target)
     local tag = playerTags[target] or npcTags[target]
     if not tag then return end
@@ -210,6 +197,18 @@ local function updateTag(target)
     end
 
     label.Text = name .. " | " .. string.format("%.1f", distance) .. " m"
+end
+
+local function clearAllESP()
+    for target, tag in pairs(playerTags) do
+        tag:Destroy()
+    end
+    for target, tag in pairs(npcTags) do
+        tag:Destroy()
+    end
+    playerTags = {}
+    npcTags = {}
+    tagCreationTime = {}
 end
 
 -- ===== 增量更新 =====
@@ -313,7 +312,7 @@ RunService.Heartbeat:Connect(function()
     end
 end)
 
--- ===== 角色添加事件 =====
+-- ===== 角色添加 =====
 local function onCharacterAdded(player)
     player.CharacterAdded:Connect(function()
         task.wait(0.5)
@@ -328,7 +327,7 @@ for _, player in pairs(Players:GetPlayers()) do
 end
 Players.PlayerAdded:Connect(onCharacterAdded)
 
--- ===== UI 创建 =====
+-- ===== UI =====
 local function createUI()
     if LocalPlayer.PlayerGui:FindFirstChild("BackroomsSurvivalUI") then return end
 
@@ -377,7 +376,7 @@ local function createUI()
     SubTitle.Size = UDim2.new(1, -70, 0, 15)
     SubTitle.Position = UDim2.new(0, 10, 0, 28)
     SubTitle.BackgroundTransparency = 1
-    SubTitle.Text = "version : v0.1.6.0"
+    SubTitle.Text = "version : v0.1.7.5"
     SubTitle.TextColor3 = Color3.fromRGB(210, 210, 210)
     SubTitle.Font = Enum.Font.SourceSans
     SubTitle.TextSize = 12
@@ -513,7 +512,7 @@ local function createUI()
         local versionLabel = Instance.new("TextLabel")
         versionLabel.Size = UDim2.new(1, 0, 0, 25)
         versionLabel.BackgroundTransparency = 1
-        versionLabel.Text = "V0.1.6.0"
+        versionLabel.Text = "V0.1.7.5"
         versionLabel.TextColor3 = Color3.fromRGB(160, 160, 160)
         versionLabel.Font = Enum.Font.SourceSansBold
         versionLabel.TextSize = 16
@@ -523,7 +522,7 @@ local function createUI()
         local items = {
             "▪ 该版本起，可查看更新内容。",
             "▪ 重构透视代码逻辑。",
-            "▪ 新增无碰撞开关。"
+            "▪ 添加了无碰撞功能。"
         }
         for _, line in ipairs(items) do
             local lbl = Instance.new("TextLabel")
