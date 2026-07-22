@@ -3,14 +3,12 @@ local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
-
 local function CreateWindow(data)
     local window = {}
     local scr = Instance.new("ScreenGui")
     scr.Name = data.Folder or "WindUI"
     scr.ResetOnSpawn = false
     scr.Parent = LocalPlayer:WaitForChild("PlayerGui")
-
     local main = Instance.new("Frame")
     main.Size = UDim2.new(0, 450, 0, 350)
     main.Position = UDim2.new(0.5, -225, 0.5, -175)
@@ -21,7 +19,6 @@ local function CreateWindow(data)
     local corner = Instance.new("UICorner")
     corner.CornerRadius = UDim.new(0, 6)
     corner.Parent = main
-
     local titleBar = Instance.new("Frame")
     titleBar.Size = UDim2.new(1, 0, 0, 40)
     titleBar.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
@@ -29,29 +26,26 @@ local function CreateWindow(data)
     local titleCorner = Instance.new("UICorner")
     titleCorner.CornerRadius = UDim.new(0, 6)
     titleCorner.Parent = titleBar
-
     local titleText = Instance.new("TextLabel")
     titleText.Size = UDim2.new(1, -80, 0, 20)
     titleText.Position = UDim2.new(0, 10, 0, 4)
     titleText.BackgroundTransparency = 1
-    titleText.Text = data.Name or "WindUI"
+    titleText.Text = tostring(data.Name or "WindUI")
     titleText.TextColor3 = Color3.new(1, 1, 1)
     titleText.Font = Enum.Font.SourceSansBold
     titleText.TextSize = 18
     titleText.TextXAlignment = Enum.TextXAlignment.Left
     titleText.Parent = titleBar
-
     local descText = Instance.new("TextLabel")
     descText.Size = UDim2.new(1, -80, 0, 16)
     descText.Position = UDim2.new(0, 10, 0, 24)
     descText.BackgroundTransparency = 1
-    descText.Text = data.Description or ""
+    descText.Text = tostring(data.Description or "")
     descText.TextColor3 = Color3.fromRGB(180, 180, 180)
     descText.Font = Enum.Font.SourceSans
     descText.TextSize = 12
     descText.TextXAlignment = Enum.TextXAlignment.Left
     descText.Parent = titleBar
-
     local closeBtn = Instance.new("TextButton")
     closeBtn.Size = UDim2.new(0, 30, 0, 30)
     closeBtn.Position = UDim2.new(1, -35, 0, 5)
@@ -62,38 +56,33 @@ local function CreateWindow(data)
     closeBtn.TextSize = 16
     closeBtn.Parent = titleBar
     closeBtn.MouseButton1Click:Connect(function() scr:Destroy() end)
-
     local minBtn = Instance.new("TextButton")
     minBtn.Size = UDim2.new(0, 30, 0, 30)
     minBtn.Position = UDim2.new(1, -70, 0, 5)
     minBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
-    minBtn.Text = "-"
+    minBtn.Text = "—"
     minBtn.TextColor3 = Color3.new(1, 1, 1)
     minBtn.Font = Enum.Font.SourceSansBold
     minBtn.TextSize = 20
     minBtn.Parent = titleBar
-
     local content = Instance.new("Frame")
     content.Size = UDim2.new(1, 0, 1, -40)
     content.Position = UDim2.new(0, 0, 0, 40)
     content.BackgroundTransparency = 1
     content.ClipsDescendants = true
     content.Parent = main
-
     local tabs = {}
     local currentTab = nil
-
     local function createTab(name)
         local tab = {}
         local btn = Instance.new("TextButton")
         btn.Size = UDim2.new(1, 0, 0, 35)
         btn.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
-        btn.Text = name
+        btn.Text = tostring(name)
         btn.TextColor3 = Color3.new(1, 1, 1)
         btn.Font = Enum.Font.SourceSans
         btn.TextSize = 16
         btn.Parent = content
-
         local container = Instance.new("ScrollingFrame")
         container.Size = UDim2.new(1, 0, 1, 0)
         container.Position = UDim2.new(0, 0, 0, 0)
@@ -103,7 +92,6 @@ local function CreateWindow(data)
         container.ClipsDescendants = true
         container.Visible = false
         container.Parent = content
-
         local layout = Instance.new("UIListLayout")
         layout.FillDirection = Enum.FillDirection.Vertical
         layout.HorizontalAlignment = Enum.HorizontalAlignment.Center
@@ -113,17 +101,15 @@ local function CreateWindow(data)
         layout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
             container.CanvasSize = UDim2.new(0, 0, 0, layout.AbsoluteContentSize.Y + 10)
         end)
-
         tab.Button = btn
         tab.Container = container
         tab.Layout = layout
-
         tab.AddLabel = function(self, text)
             local lbl = Instance.new("TextLabel")
             lbl.Size = UDim2.new(1, -20, 0, 24)
             lbl.Position = UDim2.new(0, 10, 0, 0)
             lbl.BackgroundTransparency = 1
-            lbl.Text = text
+            lbl.Text = tostring(text)
             lbl.TextColor3 = Color3.new(1, 1, 1)
             lbl.Font = Enum.Font.SourceSans
             lbl.TextSize = 15
@@ -131,24 +117,21 @@ local function CreateWindow(data)
             lbl.TextWrapped = true
             lbl.Parent = container
         end
-
         tab.AddToggle = function(self, labelText, initialState, callback)
             local row = Instance.new("Frame")
             row.Size = UDim2.new(1, 0, 0, 32)
             row.BackgroundTransparency = 1
             row.Parent = container
-
             local label = Instance.new("TextLabel")
             label.Size = UDim2.new(0.65, -10, 1, 0)
             label.Position = UDim2.new(0, 0, 0, 0)
             label.BackgroundTransparency = 1
-            label.Text = labelText
+            label.Text = tostring(labelText)
             label.TextColor3 = Color3.new(1, 1, 1)
             label.Font = Enum.Font.SourceSans
             label.TextSize = 15
             label.TextXAlignment = Enum.TextXAlignment.Left
             label.Parent = row
-
             local toggle = Instance.new("TextButton")
             toggle.Size = UDim2.new(0, 50, 0, 26)
             toggle.Position = UDim2.new(1, -50, 0.5, -13)
@@ -158,7 +141,6 @@ local function CreateWindow(data)
             local tCorner = Instance.new("UICorner")
             tCorner.CornerRadius = UDim.new(0, 4)
             tCorner.Parent = toggle
-
             local dot = Instance.new("Frame")
             dot.Size = UDim2.new(0, 22, 0, 22)
             dot.Position = UDim2.new(0, 2, 0.5, -11)
@@ -168,7 +150,6 @@ local function CreateWindow(data)
             local dCorner = Instance.new("UICorner")
             dCorner.CornerRadius = UDim.new(1, 0)
             dCorner.Parent = dot
-
             local state = initialState
             local function update(isOn)
                 local targetPos, targetColor, bgColor
@@ -186,25 +167,22 @@ local function CreateWindow(data)
                 TweenService:Create(toggle, tween, {BackgroundColor3 = bgColor}):Play()
             end
             update(state)
-
             toggle.MouseButton1Click:Connect(function()
                 state = not state
                 callback(state)
                 update(state)
             end)
         end
-
         tab.AddButton = function(self, labelText, callback)
             local row = Instance.new("Frame")
             row.Size = UDim2.new(1, 0, 0, 32)
             row.BackgroundTransparency = 1
             row.Parent = container
-
             local btn = Instance.new("TextButton")
             btn.Size = UDim2.new(1, -20, 1, 0)
             btn.Position = UDim2.new(0, 10, 0, 0)
             btn.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
-            btn.Text = labelText
+            btn.Text = tostring(labelText)
             btn.TextColor3 = Color3.new(1, 1, 1)
             btn.Font = Enum.Font.SourceSans
             btn.TextSize = 15
@@ -214,7 +192,6 @@ local function CreateWindow(data)
             bCorner.Parent = btn
             btn.MouseButton1Click:Connect(callback)
         end
-
         btn.MouseButton1Click:Connect(function()
             if currentTab then
                 currentTab.Button.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
@@ -224,7 +201,6 @@ local function CreateWindow(data)
             container.Visible = true
             currentTab = tab
         end)
-
         if #tabs == 0 then
             btn.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
             container.Visible = true
@@ -233,67 +209,108 @@ local function CreateWindow(data)
         table.insert(tabs, tab)
         return tab
     end
-
     window.CreateTab = createTab
     window.Destroy = function() scr:Destroy() end
-
     local minimized = false
     local savedPosition = main.Position
-
+    local savedSize = main.Size
+    local miniBar = Instance.new("Frame")
+    miniBar.Size = UDim2.new(0, 200, 0, 40)
+    miniBar.Position = UDim2.new(0.5, -100, 0, 0)
+    miniBar.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+    miniBar.BorderSizePixel = 0
+    miniBar.Visible = false
+    miniBar.Parent = scr
+    local miniCorner = Instance.new("UICorner")
+    miniCorner.CornerRadius = UDim.new(1, 0)
+    miniCorner.Parent = miniBar
+    local miniTitle = Instance.new("TextLabel")
+    miniTitle.Size = UDim2.new(1, 0, 1, 0)
+    miniTitle.BackgroundTransparency = 1
+    miniTitle.Text = tostring(data.Name or "WindUI")
+    miniTitle.TextColor3 = Color3.new(1, 1, 1)
+    miniTitle.Font = Enum.Font.SourceSansBold
+    miniTitle.TextSize = 16
+    miniTitle.TextXAlignment = Enum.TextXAlignment.Center
+    miniTitle.Parent = miniBar
+    miniBar.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            minimized = false
+            miniBar.Visible = false
+            main.Visible = true
+            main.Size = savedSize
+            main.Position = savedPosition
+            minBtn.Text = "—"
+            content.Visible = true
+        end
+    end)
     minBtn.MouseButton1Click:Connect(function()
         minimized = not minimized
         if minimized then
             savedPosition = main.Position
-            local targetSize = UDim2.new(0, 450, 0, 40)
-            local targetPos = UDim2.new(0.5, -225, 0, 0)
-            TweenService:Create(main, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Size = targetSize, Position = targetPos}):Play()
+            savedSize = main.Size
+            main.Visible = false
+            miniBar.Visible = true
+            miniBar.Position = UDim2.new(0.5, -100, 0, 10)
             minBtn.Text = "+"
             content.Visible = false
         else
-            local targetSize = UDim2.new(0, 450, 0, 350)
-            TweenService:Create(main, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Size = targetSize, Position = savedPosition}):Play()
-            minBtn.Text = "-"
+            miniBar.Visible = false
+            main.Visible = true
+            main.Size = savedSize
+            main.Position = savedPosition
+            minBtn.Text = "—"
             content.Visible = true
         end
     end)
-
     local dragging = false
     local dragOffset = Vector2.new()
+    local dragTarget = nil
     local function onInputBegan(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
             local pos = Vector2.new(input.Position.X, input.Position.Y)
             local tbPos = titleBar.AbsolutePosition
             local tbSize = titleBar.AbsoluteSize
-            if pos.X >= tbPos.X and pos.X <= tbPos.X + tbSize.X and pos.Y >= tbPos.Y and pos.Y <= tbPos.Y + tbSize.Y then
+            if main.Visible and pos.X >= tbPos.X and pos.X <= tbPos.X + tbSize.X and pos.Y >= tbPos.Y and pos.Y <= tbPos.Y + tbSize.Y then
                 dragging = true
                 dragOffset = pos - Vector2.new(main.AbsolutePosition.X, main.AbsolutePosition.Y)
+                dragTarget = main
+                return
+            end
+            if miniBar.Visible then
+                local mbPos = miniBar.AbsolutePosition
+                local mbSize = miniBar.AbsoluteSize
+                if pos.X >= mbPos.X and pos.X <= mbPos.X + mbSize.X and pos.Y >= mbPos.Y and pos.Y <= mbPos.Y + mbSize.Y then
+                    dragging = true
+                    dragOffset = pos - Vector2.new(miniBar.AbsolutePosition.X, miniBar.AbsolutePosition.Y)
+                    dragTarget = miniBar
+                    return
+                end
             end
         end
     end
     local function onInputChanged(input)
-        if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+        if dragging and dragTarget and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
             local pos = Vector2.new(input.Position.X, input.Position.Y)
-            main.Position = UDim2.new(0, pos.X - dragOffset.X, 0, pos.Y - dragOffset.Y)
+            dragTarget.Position = UDim2.new(0, pos.X - dragOffset.X, 0, pos.Y - dragOffset.Y)
         end
     end
     local function onInputEnded(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
             dragging = false
+            dragTarget = nil
         end
     end
     UserInputService.InputBegan:Connect(onInputBegan)
     UserInputService.InputChanged:Connect(onInputChanged)
     UserInputService.InputEnded:Connect(onInputEnded)
-
     return window
 end
-
 local function Notify(data)
     local gui = Instance.new("ScreenGui")
     gui.Name = "WindUINotification"
     gui.ResetOnSpawn = false
     gui.Parent = LocalPlayer:WaitForChild("PlayerGui")
-
     local frame = Instance.new("Frame")
     frame.Size = UDim2.new(0, 350, 0, 120)
     frame.Position = UDim2.new(0.5, -175, 0.5, -60)
@@ -303,30 +320,27 @@ local function Notify(data)
     local corner = Instance.new("UICorner")
     corner.CornerRadius = UDim.new(0, 8)
     corner.Parent = frame
-
     local title = Instance.new("TextLabel")
     title.Size = UDim2.new(1, -20, 0, 30)
     title.Position = UDim2.new(0, 10, 0, 10)
     title.BackgroundTransparency = 1
-    title.Text = data.Title or "通知"
+    title.Text = tostring(data.Title or "通知")
     title.TextColor3 = Color3.new(1, 1, 1)
     title.Font = Enum.Font.SourceSansBold
     title.TextSize = 20
     title.TextXAlignment = Enum.TextXAlignment.Left
     title.Parent = frame
-
     local desc = Instance.new("TextLabel")
     desc.Size = UDim2.new(1, -20, 0, 40)
     desc.Position = UDim2.new(0, 10, 0, 40)
     desc.BackgroundTransparency = 1
-    desc.Text = data.Text or ""
+    desc.Text = tostring(data.Text or "")
     desc.TextColor3 = Color3.fromRGB(200, 200, 200)
     desc.Font = Enum.Font.SourceSans
     desc.TextSize = 14
     desc.TextXAlignment = Enum.TextXAlignment.Left
     desc.TextWrapped = true
     desc.Parent = frame
-
     local okBtn = Instance.new("TextButton")
     okBtn.Size = UDim2.new(0, 80, 0, 30)
     okBtn.Position = UDim2.new(1, -90, 1, -40)
@@ -340,28 +354,23 @@ local function Notify(data)
     btnCorner.CornerRadius = UDim.new(0, 4)
     btnCorner.Parent = okBtn
     okBtn.MouseButton1Click:Connect(function() gui:Destroy() end)
-
     local duration = data.Duration or 0
     if duration > 0 then
         task.wait(duration)
         gui:Destroy()
     end
 end
-
 WindUI.CreateWindow = CreateWindow
 WindUI.Notify = Notify
-
 local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
 local Lighting = game:GetService("Lighting")
 local RunService = game:GetService("RunService")
 local LocalPlayer = Players.LocalPlayer
-
 local PlayerESPEnabled = false
 local NPCESPEnabled = false
 local FullbrightEnabled = false
 local NoclipEnabled = false
-
 local function applyFullbright(enable)
     if enable then
         Lighting.Brightness = 2
@@ -377,11 +386,9 @@ local function applyFullbright(enable)
         Lighting.GlobalShadows = true
     end
 end
-
 Lighting.LightingChanged:Connect(function()
     if FullbrightEnabled then applyFullbright(true) end
 end)
-
 local noclipConnection = nil
 local function toggleNoclip(enable)
     NoclipEnabled = enable
@@ -409,14 +416,12 @@ local function toggleNoclip(enable)
         end
     end
 end
-
 LocalPlayer.CharacterAdded:Connect(function(char)
     if NoclipEnabled then
         task.wait(0.5)
         toggleNoclip(true)
     end
 end)
-
 local NPCsFolder = Workspace:FindFirstChild("NPCs")
 local function isNPCModel(model)
     if not model or not model:IsA("Model") then return false end
@@ -429,11 +434,9 @@ local function isNPCModel(model)
     end
     return false
 end
-
 local playerTags = {}
 local npcTags = {}
 local tagCreationTime = {}
-
 local function removeTag(target)
     local tag = playerTags[target]
     if tag then
@@ -449,7 +452,6 @@ local function removeTag(target)
         tagCreationTime[target] = nil
     end
 end
-
 local function createTag(target, isPlayer)
     local tagDict = isPlayer and playerTags or npcTags
     if tagDict[target] then return end
@@ -489,7 +491,6 @@ local function createTag(target, isPlayer)
     tagDict[target] = tag
     tagCreationTime[target] = tick()
 end
-
 local function updateTag(target)
     local tag = playerTags[target] or npcTags[target]
     if not tag then return end
@@ -524,7 +525,6 @@ local function updateTag(target)
     local hpText = (type(hp) == "number") and ("HP: " .. hp) or "HP: ??"
     label.Text = name .. " | " .. string.format("%.1f", distance) .. " m | " .. hpText
 end
-
 local function clearAllESP()
     for target, tag in pairs(playerTags) do tag:Destroy() end
     for target, tag in pairs(npcTags) do tag:Destroy() end
@@ -557,7 +557,6 @@ local function updatePlayerESP()
         playerTags = {}
     end
 end
-
 local function updateNPCESP()
     if NPCESPEnabled then
         for _, target in pairs(Workspace:GetDescendants()) do
@@ -582,7 +581,6 @@ local function updateNPCESP()
         npcTags = {}
     end
 end
-
 local frameCounter = 0
 RunService.Heartbeat:Connect(function()
     frameCounter = frameCounter + 1
@@ -688,7 +686,6 @@ RunService.Heartbeat:Connect(function()
         end
     end
 end)
-
 local function onCharacterAdded(player)
     player.CharacterAdded:Connect(function()
         task.wait(0.5)
@@ -697,7 +694,6 @@ local function onCharacterAdded(player)
         if NoclipEnabled then toggleNoclip(true) end
     end)
 end
-
 for _, player in pairs(Players:GetPlayers()) do
     onCharacterAdded(player)
 end
@@ -709,11 +705,9 @@ local MainWindow = WindUI.CreateWindow({
     Keybind = Enum.KeyCode.RightShift,
     Folder = "ExplorerScript"
 })
-
 local UpdateTab = MainWindow:CreateTab("更新公告")
 UpdateTab:AddLabel("version：v0.2.0.5")
 UpdateTab:AddLabel("▪重置UI。")
-
 local SettingsTab = MainWindow:CreateTab("基础功能")
 SettingsTab:AddToggle("全图高亮", FullbrightEnabled, function(value)
     FullbrightEnabled = value
@@ -722,7 +716,6 @@ end)
 SettingsTab:AddToggle("无碰撞", NoclipEnabled, function(value)
     toggleNoclip(value)
 end)
-
 local ESPTab = MainWindow:CreateTab("透视")
 ESPTab:AddToggle("玩家ESP", PlayerESPEnabled, function(value)
     PlayerESPEnabled = value
