@@ -4,176 +4,141 @@ local UserInputService = game:GetService("UserInputService")
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 
-local function create(className, props)
-    local obj = Instance.new(className)
-    for k, v in pairs(props) do
-        obj[k] = v
-    end
-    return obj
-end
-
 local function CreateWindow(data)
     local window = {}
-    local scr = create("ScreenGui", {
-        Name = data.Folder or "WindUI",
-        ResetOnSpawn = false,
-        Parent = LocalPlayer:WaitForChild("PlayerGui")
-    })
+    local scr = Instance.new("ScreenGui")
+    scr.Name = data.Folder or "WindUI"
+    scr.ResetOnSpawn = false
+    scr.Parent = LocalPlayer:WaitForChild("PlayerGui")
 
-    -- 主框架（中心锚点，原地缩放）
-    local main = create("Frame", {
-        AnchorPoint = Vector2.new(0.5, 0.5),
-        Size = UDim2.new(0, 460, 0, 380),
-        Position = UDim2.new(0.5, 0, 0.5, 0),
-        BackgroundColor3 = Color3.fromRGB(25, 25, 25),
-        BorderSizePixel = 0,
-        ClipsDescendants = true,
-        Active = true,
-        Parent = scr
-    })
-    create("UICorner", { CornerRadius = UDim.new(0, 8), Parent = main })
+    -- 主框架 (中心锚点)
+    local main = Instance.new("Frame")
+    main.AnchorPoint = Vector2.new(0.5, 0.5)
+    main.Size = UDim2.new(0, 460, 0, 380)
+    main.Position = UDim2.new(0.5, 0, 0.5, 0)
+    main.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+    main.BorderSizePixel = 0
+    main.ClipsDescendants = true
+    main.Parent = scr
 
-    -- 整体透明度控制（所有子元素随此渐变）
-    local canvasGroup = create("CanvasGroup", {
-        Size = UDim2.new(1, 0, 1, 0),
-        BackgroundTransparency = 1,
-        GroupTransparency = 0,
-        Parent = main
-    })
+    -- 整体透明度控制容器
+    local canvasGroup = Instance.new("CanvasGroup")
+    canvasGroup.Size = UDim2.new(1, 0, 1, 0)
+    canvasGroup.BackgroundTransparency = 1
+    canvasGroup.GroupTransparency = 0
+    canvasGroup.Parent = main
 
     -- 标题栏
-    local titleBar = create("Frame", {
-        Size = UDim2.new(1, 0, 0, 44),
-        BackgroundColor3 = Color3.fromRGB(45, 45, 45),
-        Parent = canvasGroup
-    })
-    create("UICorner", { CornerRadius = UDim.new(0, 8), Parent = titleBar })
+    local titleBar = Instance.new("Frame")
+    titleBar.Size = UDim2.new(1, 0, 0, 44)
+    titleBar.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
+    titleBar.Parent = canvasGroup
 
-    local titleText = create("TextLabel", {
-        Size = UDim2.new(1, -90, 0, 22),
-        Position = UDim2.new(0, 12, 0, 4),
-        BackgroundTransparency = 1,
-        Text = tostring(data.Name or "WindUI"),
-        TextColor3 = Color3.new(1, 1, 1),
-        Font = Enum.Font.SourceSansBold,
-        TextSize = 18,
-        TextXAlignment = Enum.TextXAlignment.Left,
-        Parent = titleBar
-    })
+    local titleText = Instance.new("TextLabel")
+    titleText.Size = UDim2.new(1, -90, 0, 22)
+    titleText.Position = UDim2.new(0, 12, 0, 4)
+    titleText.BackgroundTransparency = 1
+    titleText.Text = data.Name or "WindUI"
+    titleText.TextColor3 = Color3.new(1, 1, 1)
+    titleText.Font = Enum.Font.SourceSansBold
+    titleText.TextSize = 18
+    titleText.TextXAlignment = Enum.TextXAlignment.Left
+    titleText.Parent = titleBar
 
-    local descText = create("TextLabel", {
-        Size = UDim2.new(1, -90, 0, 16),
-        Position = UDim2.new(0, 12, 0, 26),
-        BackgroundTransparency = 1,
-        Text = tostring(data.Description or ""),
-        TextColor3 = Color3.fromRGB(180, 180, 180),
-        Font = Enum.Font.SourceSans,
-        TextSize = 12,
-        TextXAlignment = Enum.TextXAlignment.Left,
-        Parent = titleBar
-    })
+    local descText = Instance.new("TextLabel")
+    descText.Size = UDim2.new(1, -90, 0, 16)
+    descText.Position = UDim2.new(0, 12, 0, 26)
+    descText.BackgroundTransparency = 1
+    descText.Text = data.Description or ""
+    descText.TextColor3 = Color3.fromRGB(180, 180, 180)
+    descText.Font = Enum.Font.SourceSans
+    descText.TextSize = 12
+    descText.TextXAlignment = Enum.TextXAlignment.Left
+    descText.Parent = titleBar
 
     -- 关闭按钮
-    local closeBtn = create("TextButton", {
-        Size = UDim2.new(0, 32, 0, 32),
-        Position = UDim2.new(1, -38, 0, 6),
-        BackgroundColor3 = Color3.fromRGB(220, 60, 60),
-        Text = "✕",
-        TextColor3 = Color3.new(1, 1, 1),
-        Font = Enum.Font.SourceSansBold,
-        TextSize = 16,
-        Parent = titleBar
-    })
-    create("UICorner", { CornerRadius = UDim.new(0, 6), Parent = closeBtn })
+    local closeBtn = Instance.new("TextButton")
+    closeBtn.Size = UDim2.new(0, 32, 0, 32)
+    closeBtn.Position = UDim2.new(1, -38, 0, 6)
+    closeBtn.BackgroundColor3 = Color3.fromRGB(220, 60, 60)
+    closeBtn.Text = "✕"
+    closeBtn.TextColor3 = Color3.new(1, 1, 1)
+    closeBtn.Font = Enum.Font.SourceSansBold
+    closeBtn.TextSize = 16
+    closeBtn.Parent = titleBar
     closeBtn.Activated:Connect(function() scr:Destroy() end)
 
     -- 最小化按钮
-    local minBtn = create("TextButton", {
-        Size = UDim2.new(0, 32, 0, 32),
-        Position = UDim2.new(1, -76, 0, 6),
-        BackgroundColor3 = Color3.fromRGB(60, 60, 60),
-        Text = "—",
-        TextColor3 = Color3.new(1, 1, 1),
-        Font = Enum.Font.SourceSansBold,
-        TextSize = 20,
-        Parent = titleBar
-    })
-    create("UICorner", { CornerRadius = UDim.new(0, 6), Parent = minBtn })
+    local minBtn = Instance.new("TextButton")
+    minBtn.Size = UDim2.new(0, 32, 0, 32)
+    minBtn.Position = UDim2.new(1, -76, 0, 6)
+    minBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+    minBtn.Text = "—"
+    minBtn.TextColor3 = Color3.new(1, 1, 1)
+    minBtn.Font = Enum.Font.SourceSansBold
+    minBtn.TextSize = 20
+    minBtn.Parent = titleBar
 
     -- 内容区域
-    local contentContainer = create("Frame", {
-        Size = UDim2.new(1, 0, 1, -44),
-        Position = UDim2.new(0, 0, 0, 44),
-        BackgroundTransparency = 1,
-        ClipsDescendants = true,
-        Parent = canvasGroup
-    })
+    local content = Instance.new("Frame")
+    content.Size = UDim2.new(1, 0, 1, -44)
+    content.Position = UDim2.new(0, 0, 0, 44)
+    content.BackgroundTransparency = 1
+    content.ClipsDescendants = true
+    content.Parent = canvasGroup
 
-    -- 左侧标签面板（不使用 ScrollingFrame，改为 Frame，确保按钮必然可见）
-    local leftPanel = create("Frame", {
-        Size = UDim2.new(0, 120, 1, 0),
-        BackgroundColor3 = Color3.fromRGB(35, 35, 35),
-        BorderSizePixel = 0,
-        ClipsDescendants = false,
-        Parent = contentContainer
-    })
-    create("UICorner", { CornerRadius = UDim.new(0, 6), Parent = leftPanel })
+    -- 左侧面板 (手动定位按钮)
+    local leftPanel = Instance.new("Frame")
+    leftPanel.Size = UDim2.new(0, 120, 1, 0)
+    leftPanel.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
+    leftPanel.BorderSizePixel = 0
+    leftPanel.Parent = content
 
-    local leftLayout = create("UIListLayout", {
-        FillDirection = Enum.FillDirection.Vertical,
-        HorizontalAlignment = Enum.HorizontalAlignment.Center,
-        VerticalAlignment = Enum.VerticalAlignment.Top,
-        Padding = UDim.new(0, 4),
-        Parent = leftPanel
-    })
+    -- 右侧面板
+    local rightPanel = Instance.new("Frame")
+    rightPanel.Size = UDim2.new(1, -120, 1, 0)
+    rightPanel.Position = UDim2.new(0, 120, 0, 0)
+    rightPanel.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+    rightPanel.BorderSizePixel = 0
+    rightPanel.Parent = content
 
-    -- 右侧内容面板
-    local rightPanel = create("Frame", {
-        Size = UDim2.new(1, -120, 1, 0),
-        Position = UDim2.new(0, 120, 0, 0),
-        BackgroundColor3 = Color3.fromRGB(40, 40, 40),
-        BorderSizePixel = 0,
-        Parent = contentContainer
-    })
-    create("UICorner", { CornerRadius = UDim.new(0, 6), Parent = rightPanel })
-
-    local tabButtons = {}
+    local tabs = {}
     local currentTab = nil
+    local buttonCount = 0
+    local btnHeight = 38
+    local btnPadding = 4
 
-    local function createTab(name)
+    function window.CreateTab(name)
         local tab = {}
-        -- 左侧按钮（使用醒目颜色验证可见性）
-        local btn = create("TextButton", {
-            Name = name,
-            Size = UDim2.new(1, -10, 0, 38),
-            BackgroundColor3 = Color3.fromRGB(65, 65, 65),
-            Text = name,
-            TextColor3 = Color3.new(1, 1, 1),
-            Font = Enum.Font.SourceSans,
-            TextSize = 15,
-            Parent = leftPanel
-        })
-        create("UICorner", { CornerRadius = UDim.new(0, 5), Parent = btn })
+        -- 计算按钮 Y 位置
+        local yPos = buttonCount * (btnHeight + btnPadding) + 4
+        buttonCount = buttonCount + 1
 
-        -- 右侧内容容器（初始隐藏）
-        local container = create("ScrollingFrame", {
-            Size = UDim2.new(1, 0, 1, 0),
-            BackgroundTransparency = 1,
-            ScrollBarThickness = 5,
-            ScrollBarImageColor3 = Color3.fromRGB(80, 80, 80),
-            CanvasSize = UDim2.new(0, 0, 0, 0),
-            ClipsDescendants = true,
-            Visible = false,
-            Parent = rightPanel
-        })
+        local btn = Instance.new("TextButton")
+        btn.Name = name
+        btn.Size = UDim2.new(1, -10, 0, btnHeight)
+        btn.Position = UDim2.new(0, 5, 0, yPos)
+        btn.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+        btn.Text = name
+        btn.TextColor3 = Color3.new(1, 1, 1)
+        btn.Font = Enum.Font.SourceSans
+        btn.TextSize = 15
+        btn.Parent = leftPanel
 
-        local layout = create("UIListLayout", {
-            FillDirection = Enum.FillDirection.Vertical,
-            HorizontalAlignment = Enum.HorizontalAlignment.Center,
-            VerticalAlignment = Enum.VerticalAlignment.Top,
-            Padding = UDim.new(0, 10),
-            Parent = container
-        })
+        local container = Instance.new("ScrollingFrame")
+        container.Size = UDim2.new(1, 0, 1, 0)
+        container.BackgroundTransparency = 1
+        container.ScrollBarThickness = 5
+        container.CanvasSize = UDim2.new(0, 0, 0, 0)
+        container.Visible = false
+        container.Parent = rightPanel
+
+        local layout = Instance.new("UIListLayout")
+        layout.FillDirection = Enum.FillDirection.Vertical
+        layout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+        layout.VerticalAlignment = Enum.VerticalAlignment.Top
+        layout.Padding = UDim.new(0, 10)
+        layout.Parent = container
         layout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
             container.CanvasSize = UDim2.new(0, 0, 0, layout.AbsoluteContentSize.Y + 16)
         end)
@@ -181,74 +146,65 @@ local function CreateWindow(data)
         tab.Button = btn
         tab.Container = container
 
-        -- 添加标签
-        tab.AddLabel = function(self, text)
-            create("TextLabel", {
-                Size = UDim2.new(1, -24, 0, 26),
-                BackgroundTransparency = 1,
-                Text = tostring(text),
-                TextColor3 = Color3.new(1, 1, 1),
-                Font = Enum.Font.SourceSans,
-                TextSize = 14,
-                TextXAlignment = Enum.TextXAlignment.Left,
-                TextWrapped = true,
-                Parent = container
-            })
+        function tab:AddLabel(text)
+            local lbl = Instance.new("TextLabel")
+            lbl.Size = UDim2.new(1, -24, 0, 26)
+            lbl.BackgroundTransparency = 1
+            lbl.Text = text
+            lbl.TextColor3 = Color3.new(1, 1, 1)
+            lbl.Font = Enum.Font.SourceSans
+            lbl.TextSize = 14
+            lbl.TextXAlignment = Enum.TextXAlignment.Left
+            lbl.Parent = container
         end
 
-        -- 添加开关
-        tab.AddToggle = function(self, labelText, initialState, callback)
-            local row = create("Frame", {
-                Size = UDim2.new(1, 0, 0, 36),
-                BackgroundTransparency = 1,
-                Parent = container
-            })
-            create("TextLabel", {
-                Size = UDim2.new(0.65, -12, 1, 0),
-                Position = UDim2.new(0, 8, 0, 0),
-                BackgroundTransparency = 1,
-                Text = tostring(labelText),
-                TextColor3 = Color3.new(1, 1, 1),
-                Font = Enum.Font.SourceSans,
-                TextSize = 14,
-                TextXAlignment = Enum.TextXAlignment.Left,
-                Parent = row
-            })
-            local toggle = create("TextButton", {
-                Size = UDim2.new(0, 54, 0, 28),
-                Position = UDim2.new(1, -60, 0.5, -14),
-                BackgroundColor3 = Color3.fromRGB(80, 80, 80),
-                Text = "",
-                Parent = row
-            })
-            create("UICorner", { CornerRadius = UDim.new(0, 6), Parent = toggle })
-            local dot = create("Frame", {
-                Size = UDim2.new(0, 24, 0, 24),
-                Position = UDim2.new(0, 2, 0.5, -12),
-                BackgroundColor3 = Color3.fromRGB(130, 130, 130),
-                BorderSizePixel = 0,
-                Parent = toggle
-            })
-            create("UICorner", { CornerRadius = UDim.new(1, 0), Parent = dot })
+        function tab:AddToggle(labelText, initialState, callback)
+            local row = Instance.new("Frame")
+            row.Size = UDim2.new(1, 0, 0, 36)
+            row.BackgroundTransparency = 1
+            row.Parent = container
+
+            local label = Instance.new("TextLabel")
+            label.Size = UDim2.new(0.65, -12, 1, 0)
+            label.Position = UDim2.new(0, 8, 0, 0)
+            label.BackgroundTransparency = 1
+            label.Text = labelText
+            label.TextColor3 = Color3.new(1, 1, 1)
+            label.Font = Enum.Font.SourceSans
+            label.TextSize = 14
+            label.TextXAlignment = Enum.TextXAlignment.Left
+            label.Parent = row
+
+            local toggle = Instance.new("TextButton")
+            toggle.Size = UDim2.new(0, 54, 0, 28)
+            toggle.Position = UDim2.new(1, -60, 0.5, -14)
+            toggle.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
+            toggle.Text = ""
+            toggle.Parent = row
+
+            local dot = Instance.new("Frame")
+            dot.Size = UDim2.new(0, 24, 0, 24)
+            dot.Position = UDim2.new(0, 2, 0.5, -12)
+            dot.BackgroundColor3 = Color3.fromRGB(130, 130, 130)
+            dot.BorderSizePixel = 0
+            dot.Parent = toggle
 
             local state = initialState
-            local function update(isOn)
-                local targetPos, targetColor, bgColor
-                if isOn then
-                    targetPos = UDim2.new(1, -26, 0.5, -12)
-                    targetColor = Color3.fromRGB(255, 255, 255)
-                    bgColor = Color3.fromRGB(46, 204, 113)
+            local function update(on)
+                local pos, col, bg
+                if on then
+                    pos = UDim2.new(1, -26, 0.5, -12)
+                    col = Color3.fromRGB(255, 255, 255)
+                    bg = Color3.fromRGB(46, 204, 113)
                 else
-                    targetPos = UDim2.new(0, 2, 0.5, -12)
-                    targetColor = Color3.fromRGB(130, 130, 130)
-                    bgColor = Color3.fromRGB(80, 80, 80)
+                    pos = UDim2.new(0, 2, 0.5, -12)
+                    col = Color3.fromRGB(130, 130, 130)
+                    bg = Color3.fromRGB(80, 80, 80)
                 end
-                local tween = TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
-                TweenService:Create(dot, tween, {Position = targetPos, BackgroundColor3 = targetColor}):Play()
-                TweenService:Create(toggle, tween, {BackgroundColor3 = bgColor}):Play()
+                TweenService:Create(dot, TweenInfo.new(0.2), {Position = pos, BackgroundColor3 = col}):Play()
+                TweenService:Create(toggle, TweenInfo.new(0.2), {BackgroundColor3 = bg}):Play()
             end
             update(state)
-
             toggle.Activated:Connect(function()
                 state = not state
                 callback(state)
@@ -256,105 +212,93 @@ local function CreateWindow(data)
             end)
         end
 
-        -- 添加按钮
-        tab.AddButton = function(self, labelText, callback)
-            local row = create("Frame", {
-                Size = UDim2.new(1, 0, 0, 36),
-                BackgroundTransparency = 1,
-                Parent = container
-            })
-            local btn2 = create("TextButton", {
-                Size = UDim2.new(1, -20, 1, 0),
-                Position = UDim2.new(0, 10, 0, 0),
-                BackgroundColor3 = Color3.fromRGB(65, 65, 65),
-                Text = tostring(labelText),
-                TextColor3 = Color3.new(1, 1, 1),
-                Font = Enum.Font.SourceSans,
-                TextSize = 14,
-                Parent = row
-            })
-            create("UICorner", { CornerRadius = UDim.new(0, 5), Parent = btn2 })
+        function tab:AddButton(labelText, callback)
+            local row = Instance.new("Frame")
+            row.Size = UDim2.new(1, 0, 0, 36)
+            row.BackgroundTransparency = 1
+            row.Parent = container
+
+            local btn2 = Instance.new("TextButton")
+            btn2.Size = UDim2.new(1, -20, 1, 0)
+            btn2.Position = UDim2.new(0, 10, 0, 0)
+            btn2.BackgroundColor3 = Color3.fromRGB(65, 65, 65)
+            btn2.Text = labelText
+            btn2.TextColor3 = Color3.new(1, 1, 1)
+            btn2.Font = Enum.Font.SourceSans
+            btn2.TextSize = 14
+            btn2.Parent = row
             btn2.Activated:Connect(callback)
         end
 
-        -- 标签切换
         btn.Activated:Connect(function()
             if currentTab then
-                currentTab.Button.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
+                currentTab.Button.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
                 currentTab.Container.Visible = false
             end
-            btn.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
+            btn.BackgroundColor3 = Color3.fromRGB(75, 75, 75)
             container.Visible = true
             currentTab = tab
         end)
 
-        table.insert(tabButtons, btn)
+        table.insert(tabs, btn)
         return tab
     end
 
-    window.CreateTab = createTab
-    window.Destroy = function() scr:Destroy() end
+    function window.Destroy()
+        scr:Destroy()
+    end
 
-    -- 动画系统（中心缩放 + CanvasGroup 整体透明度渐变）
+    -- 动画与迷你条
     local minimized = false
     local savedSize = main.Size
     local minSize = UDim2.new(0, 345, 0, 285)
 
-    -- 迷你条
-    local miniBar = create("Frame", {
-        Size = UDim2.new(0, 210, 0, 38),
-        Position = UDim2.new(0.5, -105, 0, 8),
-        BackgroundColor3 = Color3.fromRGB(25, 25, 25),
-        BorderSizePixel = 0,
-        Visible = false,
-        Parent = scr
-    })
-    create("UICorner", { CornerRadius = UDim.new(1, 0), Parent = miniBar })
+    local miniBar = Instance.new("Frame")
+    miniBar.Size = UDim2.new(0, 210, 0, 38)
+    miniBar.Position = UDim2.new(0.5, -105, 0, 8)
+    miniBar.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+    miniBar.BorderSizePixel = 0
+    miniBar.Visible = false
+    miniBar.Parent = scr
 
-    local dragHandle = create("Frame", {
-        Size = UDim2.new(0, 54, 1, 0),
-        BackgroundColor3 = Color3.fromRGB(55, 55, 55),
-        BorderSizePixel = 0,
-        Parent = miniBar
-    })
-    create("UICorner", { CornerRadius = UDim.new(1, 0), Parent = dragHandle })
-    create("TextLabel", {
-        Size = UDim2.new(1, 0, 1, 0),
-        BackgroundTransparency = 1,
-        Text = "⠿",
-        TextColor3 = Color3.fromRGB(200, 200, 200),
-        Font = Enum.Font.SourceSansBold,
-        TextSize = 20,
-        TextXAlignment = Enum.TextXAlignment.Center,
-        TextYAlignment = Enum.TextYAlignment.Center,
-        Parent = dragHandle
-    })
+    local dragHandle = Instance.new("Frame")
+    dragHandle.Size = UDim2.new(0, 54, 1, 0)
+    dragHandle.BackgroundColor3 = Color3.fromRGB(55, 55, 55)
+    dragHandle.Parent = miniBar
+    local dhIcon = Instance.new("TextLabel")
+    dhIcon.Size = UDim2.new(1, 0, 1, 0)
+    dhIcon.BackgroundTransparency = 1
+    dhIcon.Text = "⠿"
+    dhIcon.TextColor3 = Color3.fromRGB(200,200,200)
+    dhIcon.Font = Enum.Font.SourceSansBold
+    dhIcon.TextSize = 20
+    dhIcon.TextXAlignment = Enum.TextXAlignment.Center
+    dhIcon.TextYAlignment = Enum.TextYAlignment.Center
+    dhIcon.Parent = dragHandle
 
-    local restoreBtn = create("TextButton", {
-        Size = UDim2.new(1, -54, 1, 0),
-        Position = UDim2.new(0, 54, 0, 0),
-        BackgroundTransparency = 1,
-        Text = "",
-        Parent = miniBar
-    })
-    create("TextLabel", {
-        Size = UDim2.new(1, -6, 1, 0),
-        Position = UDim2.new(0, 3, 0, 0),
-        BackgroundTransparency = 1,
-        Text = tostring(data.Name or "WindUI"),
-        TextColor3 = Color3.new(1, 1, 1),
-        Font = Enum.Font.SourceSansBold,
-        TextSize = 14,
-        TextXAlignment = Enum.TextXAlignment.Left,
-        Parent = restoreBtn
-    })
+    local restoreBtn = Instance.new("TextButton")
+    restoreBtn.Size = UDim2.new(1, -54, 1, 0)
+    restoreBtn.Position = UDim2.new(0, 54, 0, 0)
+    restoreBtn.BackgroundTransparency = 1
+    restoreBtn.Text = ""
+    restoreBtn.Parent = miniBar
+    local miniTitle = Instance.new("TextLabel")
+    miniTitle.Size = UDim2.new(1, -6, 1, 0)
+    miniTitle.Position = UDim2.new(0, 3, 0, 0)
+    miniTitle.BackgroundTransparency = 1
+    miniTitle.Text = data.Name or "WindUI"
+    miniTitle.TextColor3 = Color3.new(1, 1, 1)
+    miniTitle.Font = Enum.Font.SourceSansBold
+    miniTitle.TextSize = 14
+    miniTitle.TextXAlignment = Enum.TextXAlignment.Left
+    miniTitle.Parent = restoreBtn
 
     local function animateMinimize()
         minimized = true
         savedSize = main.Size
-        local tweenInfo = TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
-        TweenService:Create(main, tweenInfo, {Size = minSize}):Play()
-        TweenService:Create(canvasGroup, tweenInfo, {GroupTransparency = 1}):Play()
+        local ti = TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+        TweenService:Create(main, ti, {Size = minSize}):Play()
+        TweenService:Create(canvasGroup, ti, {GroupTransparency = 1}):Play()
         task.delay(0.4, function()
             main.Visible = false
             miniBar.Visible = true
@@ -368,77 +312,70 @@ local function CreateWindow(data)
         main.Visible = true
         main.Size = minSize
         canvasGroup.GroupTransparency = 1
-        local tweenInfo = TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
-        TweenService:Create(main, tweenInfo, {Size = savedSize}):Play()
-        TweenService:Create(canvasGroup, tweenInfo, {GroupTransparency = 0}):Play()
+        local ti = TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+        TweenService:Create(main, ti, {Size = savedSize}):Play()
+        TweenService:Create(canvasGroup, ti, {GroupTransparency = 0}):Play()
         minBtn.Text = "—"
     end
 
     minBtn.Activated:Connect(function()
-        if minimized then
-            animateRestore()
-        else
-            animateMinimize()
-        end
+        if minimized then animateRestore() else animateMinimize() end
     end)
-
     restoreBtn.Activated:Connect(function()
-        if minimized then
-            animateRestore()
-        end
+        if minimized then animateRestore() end
     end)
 
-    -- 全窗口拖动（排除所有按钮）
-    local dragging = false
-    local dragOffset = Vector2.new()
-    local dragTarget = nil
+    -- 全窗口拖动（排除按钮）
+    local dragging, dragStart, dragObj = false, nil, nil
+    local function isButton(obj)
+        while obj do
+            if obj:IsA("TextButton") or obj:IsA("ImageButton") then return true end
+            obj = obj.Parent
+        end
+        return false
+    end
 
     local function onInputBegan(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
             local pos = Vector2.new(input.Position.X, input.Position.Y)
-            -- 检查点击位置下方是否有任何按钮（包括文字按钮、图像按钮）
-            local guiObjects = UserInputService:GetGuiObjectsAtPosition(pos.X, pos.Y)
-            local foundButton = false
-            for _, obj in ipairs(guiObjects) do
-                if obj:IsA("TextButton") or obj:IsA("ImageButton") then
-                    foundButton = true
-                    break
-                end
+            local objs = UserInputService:GetGuiObjectsAtPosition(pos.X, pos.Y)
+            local foundBtn = false
+            for _, obj in ipairs(objs) do
+                if isButton(obj) then foundBtn = true break end
             end
-            if foundButton then return end
+            if foundBtn then return end
 
-            -- 开始拖动主窗口或迷你条
             if main.Visible then
-                local mainPos = main.AbsolutePosition
-                local mainSize = main.AbsoluteSize
-                if pos.X >= mainPos.X and pos.X <= mainPos.X + mainSize.X and pos.Y >= mainPos.Y and pos.Y <= mainPos.Y + mainSize.Y then
+                local mPos = main.AbsolutePosition
+                local mSize = main.AbsoluteSize
+                if pos.X >= mPos.X and pos.X <= mPos.X + mSize.X and pos.Y >= mPos.Y and pos.Y <= mPos.Y + mSize.Y then
                     dragging = true
-                    dragOffset = pos - mainPos
-                    dragTarget = main
+                    dragStart = pos - mPos
+                    dragObj = main
                 end
             elseif miniBar.Visible then
                 local mbPos = miniBar.AbsolutePosition
                 local mbSize = miniBar.AbsoluteSize
                 if pos.X >= mbPos.X and pos.X <= mbPos.X + mbSize.X and pos.Y >= mbPos.Y and pos.Y <= mbPos.Y + mbSize.Y then
                     dragging = true
-                    dragOffset = pos - mbPos
-                    dragTarget = miniBar
+                    dragStart = pos - mbPos
+                    dragObj = miniBar
                 end
             end
         end
     end
 
     local function onInputChanged(input)
-        if dragging and dragTarget and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+        if dragging and dragObj and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
             local pos = Vector2.new(input.Position.X, input.Position.Y)
-            dragTarget.Position = UDim2.new(0, pos.X - dragOffset.X, 0, pos.Y - dragOffset.Y)
+            dragObj.Position = UDim2.new(0, pos.X - dragStart.X, 0, pos.Y - dragStart.Y)
         end
     end
 
     local function onInputEnded(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
             dragging = false
-            dragTarget = nil
+            dragObj = nil
         end
     end
 
@@ -450,86 +387,74 @@ local function CreateWindow(data)
 end
 
 -- 通知系统
-local notificationContainer = nil
+local notifFrame
 local function Notify(data)
-    if not notificationContainer then
-        notificationContainer = create("Frame", {
-            Size = UDim2.new(0, 320, 0, 0),
-            Position = UDim2.new(1, -330, 1, -10),
-            BackgroundTransparency = 1,
-            Parent = LocalPlayer:WaitForChild("PlayerGui")
-        })
-        local layout = create("UIListLayout", {
-            FillDirection = Enum.FillDirection.Vertical,
-            VerticalAlignment = Enum.VerticalAlignment.Bottom,
-            HorizontalAlignment = Enum.HorizontalAlignment.Right,
-            Padding = UDim.new(0, 6),
-            Parent = notificationContainer
-        })
+    if not notifFrame then
+        notifFrame = Instance.new("Frame")
+        notifFrame.Size = UDim2.new(0, 320, 0, 0)
+        notifFrame.Position = UDim2.new(1, -330, 1, -10)
+        notifFrame.BackgroundTransparency = 1
+        notifFrame.Parent = LocalPlayer:WaitForChild("PlayerGui")
+        local layout = Instance.new("UIListLayout")
+        layout.FillDirection = Enum.FillDirection.Vertical
+        layout.VerticalAlignment = Enum.VerticalAlignment.Bottom
+        layout.HorizontalAlignment = Enum.HorizontalAlignment.Right
+        layout.Padding = UDim.new(0, 6)
+        layout.Parent = notifFrame
         layout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
-            notificationContainer.Size = UDim2.new(0, 320, 0, layout.AbsoluteContentSize.Y + 10)
+            notifFrame.Size = UDim2.new(0, 320, 0, layout.AbsoluteContentSize.Y + 10)
         end)
     end
 
-    local frame = create("Frame", {
-        Size = UDim2.new(0, 300, 0, 72),
-        BackgroundColor3 = Color3.fromRGB(35, 35, 35),
-        BorderSizePixel = 0,
-        ClipsDescendants = true,
-        Position = UDim2.new(1, 10, 0, 0),
-        Parent = notificationContainer
-    })
-    create("UICorner", { CornerRadius = UDim.new(0, 8), Parent = frame })
+    local frame = Instance.new("Frame")
+    frame.Size = UDim2.new(0, 300, 0, 72)
+    frame.BackgroundColor3 = Color3.fromRGB(35,35,35)
+    frame.BorderSizePixel = 0
+    frame.Position = UDim2.new(1, 10, 0, 0)
+    frame.Parent = notifFrame
 
-    create("TextLabel", {
-        Size = UDim2.new(1, -40, 0, 26),
-        Position = UDim2.new(0, 12, 0, 6),
-        BackgroundTransparency = 1,
-        Text = tostring(data.Title or "通知"),
-        TextColor3 = Color3.new(1, 1, 1),
-        Font = Enum.Font.SourceSansBold,
-        TextSize = 16,
-        TextXAlignment = Enum.TextXAlignment.Left,
-        Parent = frame
-    })
+    local title = Instance.new("TextLabel")
+    title.Size = UDim2.new(1, -40, 0, 26)
+    title.Position = UDim2.new(0, 12, 0, 6)
+    title.BackgroundTransparency = 1
+    title.Text = data.Title or "通知"
+    title.TextColor3 = Color3.new(1,1,1)
+    title.Font = Enum.Font.SourceSansBold
+    title.TextSize = 16
+    title.TextXAlignment = Enum.TextXAlignment.Left
+    title.Parent = frame
 
-    local closeBtn = create("TextButton", {
-        Size = UDim2.new(0, 26, 0, 26),
-        Position = UDim2.new(1, -32, 0, 4),
-        BackgroundColor3 = Color3.fromRGB(200, 50, 50),
-        Text = "✕",
-        TextColor3 = Color3.new(1, 1, 1),
-        Font = Enum.Font.SourceSansBold,
-        TextSize = 14,
-        Parent = frame
-    })
-    create("UICorner", { CornerRadius = UDim.new(0, 5), Parent = closeBtn })
-    closeBtn.Activated:Connect(function() frame:Destroy() end)
+    local cls = Instance.new("TextButton")
+    cls.Size = UDim2.new(0, 26, 0, 26)
+    cls.Position = UDim2.new(1, -32, 0, 4)
+    cls.BackgroundColor3 = Color3.fromRGB(200,50,50)
+    cls.Text = "✕"
+    cls.TextColor3 = Color3.new(1,1,1)
+    cls.Font = Enum.Font.SourceSansBold
+    cls.TextSize = 14
+    cls.Parent = frame
+    cls.Activated:Connect(function() frame:Destroy() end)
 
-    create("TextLabel", {
-        Size = UDim2.new(1, -24, 0, 30),
-        Position = UDim2.new(0, 12, 0, 34),
-        BackgroundTransparency = 1,
-        Text = tostring(data.Text or ""),
-        TextColor3 = Color3.fromRGB(200, 200, 200),
-        Font = Enum.Font.SourceSans,
-        TextSize = 13,
-        TextXAlignment = Enum.TextXAlignment.Left,
-        TextYAlignment = Enum.TextYAlignment.Top,
-        TextWrapped = true,
-        Parent = frame
-    })
+    local desc = Instance.new("TextLabel")
+    desc.Size = UDim2.new(1, -24, 0, 30)
+    desc.Position = UDim2.new(0, 12, 0, 34)
+    desc.BackgroundTransparency = 1
+    desc.Text = data.Text or ""
+    desc.TextColor3 = Color3.fromRGB(200,200,200)
+    desc.Font = Enum.Font.SourceSans
+    desc.TextSize = 13
+    desc.TextXAlignment = Enum.TextXAlignment.Left
+    desc.TextYAlignment = Enum.TextYAlignment.Top
+    desc.TextWrapped = true
+    desc.Parent = frame
 
-    local tweenInfo = TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
-    TweenService:Create(frame, tweenInfo, {Position = UDim2.new(0, 0, 0, 0)}):Play()
-
-    local duration = data.Duration or 4
-    if duration > 0 then
+    TweenService:Create(frame, TweenInfo.new(0.3), {Position = UDim2.new(0, 0, 0, 0)}):Play()
+    local dur = data.Duration or 4
+    if dur > 0 then
         task.spawn(function()
-            task.wait(duration)
-            if frame and frame.Parent then
-                local fadeOut = TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
-                TweenService:Create(frame, fadeOut, {BackgroundTransparency = 1}):Play()
+            task.wait(dur)
+            if frame.Parent then
+                TweenService:Create(frame, TweenInfo.new(0.3), {BackgroundTransparency = 1}):Play()
                 task.wait(0.3)
                 frame:Destroy()
             end
@@ -551,18 +476,17 @@ local NPCESPEnabled = false
 local FullbrightEnabled = false
 local NoclipEnabled = false
 
--- 全图高亮
-local function applyFullbright(enable)
-    if enable then
+function applyFullbright(on)
+    if on then
         Lighting.Brightness = 2
-        Lighting.Ambient = Color3.new(1, 1, 1)
-        Lighting.OutdoorAmbient = Color3.new(1, 1, 1)
+        Lighting.Ambient = Color3.new(1,1,1)
+        Lighting.OutdoorAmbient = Color3.new(1,1,1)
         Lighting.FogEnd = 100000
         Lighting.GlobalShadows = false
     else
         Lighting.Brightness = 1
-        Lighting.Ambient = Color3.new(0, 0, 0)
-        Lighting.OutdoorAmbient = Color3.new(0, 0, 0)
+        Lighting.Ambient = Color3.new(0,0,0)
+        Lighting.OutdoorAmbient = Color3.new(0,0,0)
         Lighting.FogEnd = 100000
         Lighting.GlobalShadows = true
     end
@@ -571,197 +495,117 @@ Lighting.LightingChanged:Connect(function()
     if FullbrightEnabled then applyFullbright(true) end
 end)
 
--- 无碰撞
-local noclipConnection = nil
-local function toggleNoclip(enable)
-    NoclipEnabled = enable
+local noclipConn
+function toggleNoclip(on)
+    NoclipEnabled = on
     local char = LocalPlayer.Character
     if not char then return end
-    if enable then
-        if noclipConnection then noclipConnection:Disconnect() end
-        noclipConnection = RunService.Stepped:Connect(function()
-            if not LocalPlayer.Character then
-                noclipConnection:Disconnect()
-                noclipConnection = nil
-                return
-            end
-            for _, v in pairs(LocalPlayer.Character:GetDescendants()) do
+    if on then
+        if noclipConn then noclipConn:Disconnect() end
+        noclipConn = RunService.Stepped:Connect(function()
+            if not LocalPlayer.Character then noclipConn:Disconnect(); noclipConn = nil; return end
+            for _, v in ipairs(LocalPlayer.Character:GetDescendants()) do
                 if v:IsA("BasePart") then v.CanCollide = false end
             end
         end)
     else
-        if noclipConnection then
-            noclipConnection:Disconnect()
-            noclipConnection = nil
-        end
-        for _, v in pairs(char:GetDescendants()) do
+        if noclipConn then noclipConn:Disconnect(); noclipConn = nil end
+        for _, v in ipairs(char:GetDescendants()) do
             if v:IsA("BasePart") then v.CanCollide = true end
         end
     end
 end
 
--- NPC检测（基于 NPCs 文件夹）
 local NPCsFolder = Workspace:FindFirstChild("NPCs")
-local function isNPCModel(model)
+function isNPC(model)
     if not model or not model:IsA("Model") then return false end
     if Players:GetPlayerFromCharacter(model) then return false end
     if not model:FindFirstChildOfClass("Humanoid") then return false end
-    local parent = model.Parent
-    while parent do
-        if parent == NPCsFolder then return true end
-        parent = parent.Parent
+    local p = model.Parent
+    while p do
+        if p == NPCsFolder then return true end
+        p = p.Parent
     end
     return false
 end
 
--- ESP标签存储与清理
-local playerTags = {}
-local npcTags = {}
-local tagCreationTime = {}
-
-Workspace.DescendantRemoving:Connect(function(desc)
-    if playerTags[desc] then
-        local tag = playerTags[desc]
-        if tag then tag:Destroy() end
-        playerTags[desc] = nil
-        tagCreationTime[desc] = nil
-    end
-    if npcTags[desc] then
-        local tag = npcTags[desc]
-        if tag then tag:Destroy() end
-        npcTags[desc] = nil
-        tagCreationTime[desc] = nil
-    end
+local playerTags, npcTags, tagTime = {}, {}, {}
+Workspace.DescendantRemoving:Connect(function(d)
+    if playerTags[d] then playerTags[d]:Destroy(); playerTags[d]=nil; tagTime[d]=nil end
+    if npcTags[d] then npcTags[d]:Destroy(); npcTags[d]=nil; tagTime[d]=nil end
 end)
 
-local function removeTag(target)
-    local tag = playerTags[target]
-    if tag then
-        tag:Destroy()
-        playerTags[target] = nil
-        tagCreationTime[target] = nil
-        return
-    end
-    tag = npcTags[target]
-    if tag then
-        tag:Destroy()
-        npcTags[target] = nil
-        tagCreationTime[target] = nil
-    end
+function removeTag(t)
+    local tag = playerTags[t] or npcTags[t]
+    if tag then tag:Destroy(); playerTags[t]=nil; npcTags[t]=nil; tagTime[t]=nil end
 end
 
-local function createTag(target, isPlayer)
-    local tagDict = isPlayer and playerTags or npcTags
-    if tagDict[target] then return end
-
-    local rootPart = target:FindFirstChild("HumanoidRootPart") or target:FindFirstChild("Head")
-    if not rootPart then return end
-
-    local tag = Instance.new("Folder")
-    tag.Name = "ESPTag"
-    tag.Parent = target
-
-    local highlight = Instance.new("Highlight")
-    highlight.Name = "Highlight"
-    highlight.Adornee = target
-    highlight.FillTransparency = 0.5
-    highlight.FillColor = Color3.fromRGB(128, 0, 255)
-    highlight.OutlineTransparency = 0
-    highlight.OutlineColor = Color3.new(1, 1, 1)
-    highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
-    highlight.Parent = tag
-
-    local billboard = Instance.new("BillboardGui")
-    billboard.Name = "Billboard"
-    billboard.Size = UDim2.new(0, 300, 0, 30)
-    billboard.StudsOffset = Vector3.new(0, 5, 0)
-    billboard.AlwaysOnTop = true
-    billboard.Adornee = rootPart
-    billboard.Parent = tag
-
-    local label = Instance.new("TextLabel")
-    label.Name = "Label"
-    label.Size = UDim2.new(1, 0, 1, 0)
-    label.BackgroundTransparency = 1
-    label.TextColor3 = Color3.new(1, 1, 1)
-    label.Font = Enum.Font.SourceSansBold
-    label.TextSize = 15
-    label.TextStrokeColor3 = Color3.new(0, 0, 0)
-    label.TextStrokeTransparency = 0.3
-    label.TextWrapped = false
-    label.TextXAlignment = Enum.TextXAlignment.Center
-    label.TextYAlignment = Enum.TextYAlignment.Center
-    label.Text = "Loading..."
-    label.Parent = billboard
-
-    tagDict[target] = tag
-    tagCreationTime[target] = tick()
+function createTag(target, isPlayer)
+    local dict = isPlayer and playerTags or npcTags
+    if dict[target] then return end
+    local root = target:FindFirstChild("HumanoidRootPart") or target:FindFirstChild("Head")
+    if not root then return end
+    local tag = Instance.new("Folder"); tag.Name="ESPTag"; tag.Parent = target
+    local hl = Instance.new("Highlight"); hl.Adornee=target; hl.FillTransparency=0.5
+    hl.FillColor=Color3.fromRGB(128,0,255); hl.OutlineColor=Color3.new(1,1,1); hl.OutlineTransparency=0
+    hl.DepthMode=Enum.HighlightDepthMode.AlwaysOnTop; hl.Parent=tag
+    local bb = Instance.new("BillboardGui"); bb.Size=UDim2.new(0,300,0,30); bb.StudsOffset=Vector3.new(0,5,0)
+    bb.AlwaysOnTop=true; bb.Adornee=root; bb.Parent=tag
+    local lb = Instance.new("TextLabel"); lb.Size=UDim2.new(1,0,1,0); lb.BackgroundTransparency=1
+    lb.TextColor3=Color3.new(1,1,1); lb.Font=Enum.Font.SourceSansBold; lb.TextSize=15
+    lb.TextStrokeColor3=Color3.new(0,0,0); lb.TextStrokeTransparency=0.3; lb.Text="Loading..."; lb.Parent=bb
+    dict[target]=tag; tagTime[target]=tick()
 end
 
-local function updateTag(target)
+function updateTag(target)
     local tag = playerTags[target] or npcTags[target]
     if not tag then return end
-    local billboard = tag:FindFirstChild("Billboard")
-    if not billboard then return end
-    local label = billboard:FindFirstChild("Label")
-    if not label then return end
-    if not LocalPlayer.Character then
-        label.Text = "Loading..."
-        return
-    end
-    local rootPart = target:FindFirstChild("HumanoidRootPart") or target:FindFirstChild("Head")
-    if not rootPart then
-        removeTag(target)
-        return
-    end
-    local primaryPart = LocalPlayer.Character:FindFirstChild("HumanoidRootPart") or LocalPlayer.Character:FindFirstChild("Head")
-    if not primaryPart then
-        label.Text = "Loading..."
-        return
-    end
-    local distance = (rootPart.Position - primaryPart.Position).Magnitude
-    if distance ~= distance or distance == math.huge then
-        removeTag(target)
-        return
-    end
-    local name = target.Name
-    local player = Players:GetPlayerFromCharacter(target)
-    if player then name = player.Name end
-    local humanoid = target:FindFirstChildOfClass("Humanoid")
-    local hp = humanoid and math.floor(humanoid.Health) or "??"
-    local hpText = (type(hp) == "number") and ("HP: " .. hp) or "HP: ??"
-    label.Text = name .. " | " .. string.format("%.1f", distance) .. " m | " .. hpText
+    local bb = tag:FindFirstChild("Billboard")
+    if not bb then return end
+    local lb = bb:FindFirstChild("TextLabel")
+    if not lb then return end
+    if not LocalPlayer.Character then lb.Text="Loading..."; return end
+    local root = target:FindFirstChild("HumanoidRootPart") or target:FindFirstChild("Head")
+    if not root then removeTag(target); return end
+    local pp = LocalPlayer.Character:FindFirstChild("HumanoidRootPart") or LocalPlayer.Character:FindFirstChild("Head")
+    if not pp then lb.Text="Loading..."; return end
+    local dist = (root.Position - pp.Position).Magnitude
+    if dist~=dist or dist==math.huge then removeTag(target); return end
+    local nm = target.Name
+    local plr = Players:GetPlayerFromCharacter(target)
+    if plr then nm=plr.Name end
+    local hum = target:FindFirstChildOfClass("Humanoid")
+    local hp = hum and math.floor(hum.Health) or "??"
+    lb.Text = nm .. " | " .. string.format("%.1f", dist) .. " m | HP: " .. hp
 end
 
-local playerESPConnection = nil
-local function enablePlayerESP()
-    if playerESPConnection then return end
-    for _, model in pairs(Workspace:GetDescendants()) do
-        if model:IsA("Model") and model:FindFirstChildOfClass("Humanoid") then
-            local isPlayer = Players:GetPlayerFromCharacter(model)
-            if isPlayer and model ~= LocalPlayer.Character then
-                local root = model:FindFirstChild("HumanoidRootPart") or model:FindFirstChild("Head")
+local playerESPConn, npcESPConn
+function enablePlayerESP()
+    if playerESPConn then return end
+    for _, m in ipairs(Workspace:GetDescendants()) do
+        if m:IsA("Model") and m:FindFirstChildOfClass("Humanoid") then
+            local plr = Players:GetPlayerFromCharacter(m)
+            if plr and m ~= LocalPlayer.Character then
+                local root = m:FindFirstChild("HumanoidRootPart") or m:FindFirstChild("Head")
                 if root and LocalPlayer.Character then
                     local pp = LocalPlayer.Character:FindFirstChild("HumanoidRootPart") or LocalPlayer.Character:FindFirstChild("Head")
-                    if pp and (root.Position - pp.Position).Magnitude <= 500 then
-                        createTag(model, true)
-                        updateTag(model)
+                    if pp and (root.Position-pp.Position).Magnitude <= 500 then
+                        createTag(m, true); updateTag(m)
                     end
                 end
             end
         end
     end
-    playerESPConnection = Workspace.DescendantAdded:Connect(function(desc)
-        if desc:IsA("Model") and desc:FindFirstChildOfClass("Humanoid") then
-            local isPlayer = Players:GetPlayerFromCharacter(desc)
-            if isPlayer and desc ~= LocalPlayer.Character then
+    playerESPConn = Workspace.DescendantAdded:Connect(function(d)
+        if d:IsA("Model") and d:FindFirstChildOfClass("Humanoid") then
+            local plr = Players:GetPlayerFromCharacter(d)
+            if plr and d ~= LocalPlayer.Character then
                 task.defer(function()
-                    local root = desc:FindFirstChild("HumanoidRootPart") or desc:FindFirstChild("Head")
+                    local root = d:FindFirstChild("HumanoidRootPart") or d:FindFirstChild("Head")
                     if root and LocalPlayer.Character then
                         local pp = LocalPlayer.Character:FindFirstChild("HumanoidRootPart") or LocalPlayer.Character:FindFirstChild("Head")
-                        if pp and (root.Position - pp.Position).Magnitude <= 500 then
-                            createTag(desc, true)
-                            updateTag(desc)
+                        if pp and (root.Position-pp.Position).Magnitude <= 500 then
+                            createTag(d, true); updateTag(d)
                         end
                     end
                 end)
@@ -770,41 +614,33 @@ local function enablePlayerESP()
     end)
 end
 
-local function disablePlayerESP()
-    if playerESPConnection then
-        playerESPConnection:Disconnect()
-        playerESPConnection = nil
-    end
-    for target, tag in pairs(playerTags) do
-        tag:Destroy()
-    end
+function disablePlayerESP()
+    if playerESPConn then playerESPConn:Disconnect(); playerESPConn=nil end
+    for k,v in pairs(playerTags) do v:Destroy() end
     playerTags = {}
 end
 
-local npcESPConnection = nil
-local function enableNPCESP()
-    if npcESPConnection then return end
-    for _, model in pairs(Workspace:GetDescendants()) do
-        if model:IsA("Model") and model:FindFirstChildOfClass("Humanoid") and isNPCModel(model) then
-            local root = model:FindFirstChild("HumanoidRootPart") or model:FindFirstChild("Head")
+function enableNPCESP()
+    if npcESPConn then return end
+    for _, m in ipairs(Workspace:GetDescendants()) do
+        if m:IsA("Model") and m:FindFirstChildOfClass("Humanoid") and isNPC(m) then
+            local root = m:FindFirstChild("HumanoidRootPart") or m:FindFirstChild("Head")
             if root and LocalPlayer.Character then
                 local pp = LocalPlayer.Character:FindFirstChild("HumanoidRootPart") or LocalPlayer.Character:FindFirstChild("Head")
-                if pp and (root.Position - pp.Position).Magnitude <= 500 then
-                    createTag(model, false)
-                    updateTag(model)
+                if pp and (root.Position-pp.Position).Magnitude <= 500 then
+                    createTag(m, false); updateTag(m)
                 end
             end
         end
     end
-    npcESPConnection = Workspace.DescendantAdded:Connect(function(desc)
-        if desc:IsA("Model") and desc:FindFirstChildOfClass("Humanoid") and isNPCModel(desc) then
+    npcESPConn = Workspace.DescendantAdded:Connect(function(d)
+        if d:IsA("Model") and d:FindFirstChildOfClass("Humanoid") and isNPC(d) then
             task.defer(function()
-                local root = desc:FindFirstChild("HumanoidRootPart") or desc:FindFirstChild("Head")
+                local root = d:FindFirstChild("HumanoidRootPart") or d:FindFirstChild("Head")
                 if root and LocalPlayer.Character then
                     local pp = LocalPlayer.Character:FindFirstChild("HumanoidRootPart") or LocalPlayer.Character:FindFirstChild("Head")
-                    if pp and (root.Position - pp.Position).Magnitude <= 500 then
-                        createTag(desc, false)
-                        updateTag(desc)
+                    if pp and (root.Position-pp.Position).Magnitude <= 500 then
+                        createTag(d, false); updateTag(d)
                     end
                 end
             end)
@@ -812,92 +648,53 @@ local function enableNPCESP()
     end)
 end
 
-local function disableNPCESP()
-    if npcESPConnection then
-        npcESPConnection:Disconnect()
-        npcESPConnection = nil
-    end
-    for target, tag in pairs(npcTags) do
-        tag:Destroy()
-    end
+function disableNPCESP()
+    if npcESPConn then npcESPConn:Disconnect(); npcESPConn=nil end
+    for k,v in pairs(npcTags) do v:Destroy() end
     npcTags = {}
 end
 
-local frameCounter = 0
+local frameCnt = 0
 RunService.Heartbeat:Connect(function()
-    frameCounter = frameCounter + 1
-    if frameCounter % 5 ~= 0 then return end
-
+    frameCnt += 1
+    if frameCnt % 5 ~= 0 then return end
     local now = tick()
     local toRemove = {}
-
-    for target, tag in pairs(playerTags) do
-        if target and target:IsA("Model") and target:FindFirstChild("ESPTag") then
-            local rootPart = target:FindFirstChild("HumanoidRootPart") or target:FindFirstChild("Head")
-            local valid = false
-            if rootPart and LocalPlayer.Character then
+    for t, _ in pairs(playerTags) do
+        if t and t:IsA("Model") and t:FindFirstChild("ESPTag") then
+            local rp = t:FindFirstChild("HumanoidRootPart") or t:FindFirstChild("Head")
+            local ok = false
+            if rp and LocalPlayer.Character then
                 local pp = LocalPlayer.Character:FindFirstChild("HumanoidRootPart") or LocalPlayer.Character:FindFirstChild("Head")
-                if pp then
-                    local dist = (rootPart.Position - pp.Position).Magnitude
-                    if dist <= 500 then
-                        valid = true
-                        updateTag(target)
-                    end
+                if pp and (rp.Position-pp.Position).Magnitude <= 500 then
+                    ok = true; updateTag(t)
                 end
             end
-            if not valid then
-                table.insert(toRemove, target)
-            else
-                local label = tag:FindFirstChild("Billboard") and tag.Billboard:FindFirstChild("Label")
-                if label and label.Text == "Loading..." and tagCreationTime[target] and now - tagCreationTime[target] > 3 then
-                    table.insert(toRemove, target)
-                end
-            end
-        else
-            table.insert(toRemove, target)
-        end
+            if not ok then table.insert(toRemove, t) end
+        else table.insert(toRemove, t) end
     end
-
-    for target, tag in pairs(npcTags) do
-        if target and target:IsA("Model") and target:FindFirstChild("ESPTag") then
-            local rootPart = target:FindFirstChild("HumanoidRootPart") or target:FindFirstChild("Head")
-            local valid = false
-            if rootPart and LocalPlayer.Character then
+    for t, _ in pairs(npcTags) do
+        if t and t:IsA("Model") and t:FindFirstChild("ESPTag") then
+            local rp = t:FindFirstChild("HumanoidRootPart") or t:FindFirstChild("Head")
+            local ok = false
+            if rp and LocalPlayer.Character then
                 local pp = LocalPlayer.Character:FindFirstChild("HumanoidRootPart") or LocalPlayer.Character:FindFirstChild("Head")
-                if pp then
-                    local dist = (rootPart.Position - pp.Position).Magnitude
-                    if dist <= 500 then
-                        valid = true
-                        updateTag(target)
-                    end
+                if pp and (rp.Position-pp.Position).Magnitude <= 500 then
+                    ok = true; updateTag(t)
                 end
             end
-            if not valid then
-                table.insert(toRemove, target)
-            else
-                local label = tag:FindFirstChild("Billboard") and tag.Billboard:FindFirstChild("Label")
-                if label and label.Text == "Loading..." and tagCreationTime[target] and now - tagCreationTime[target] > 3 then
-                    table.insert(toRemove, target)
-                end
-            end
-        else
-            table.insert(toRemove, target)
-        end
+            if not ok then table.insert(toRemove, t) end
+        else table.insert(toRemove, t) end
     end
-
-    for _, target in ipairs(toRemove) do
-        removeTag(target)
-    end
+    for _, t in ipairs(toRemove) do removeTag(t) end
 end)
 
-LocalPlayer.CharacterAdded:Connect(function(char)
+LocalPlayer.CharacterAdded:Connect(function()
     task.wait(0.5)
-    if NoclipEnabled then
-        toggleNoclip(true)
-    end
+    if NoclipEnabled then toggleNoclip(true) end
 end)
 
-local MainWindow = WindUI.CreateWindow({
+local win = WindUI.CreateWindow({
     Name = "Explorer Script",
     Description = "version：v0.2.0.5",
     Theme = "Dark",
@@ -905,35 +702,26 @@ local MainWindow = WindUI.CreateWindow({
     Folder = "ExplorerScript"
 })
 
-local UpdateTab = MainWindow:CreateTab("🔍更新内容🔍")
-UpdateTab:AddLabel("version：v0.2.0.5")
-UpdateTab:AddLabel("▪重置UI。")
+local updateTab = win:CreateTab("🔍更新内容🔍")
+updateTab:AddLabel("version：v0.2.0.5")
+updateTab:AddLabel("▪重置UI。")
 
-local SettingsTab = MainWindow:CreateTab("⚙️常规功能⚙️")
-SettingsTab:AddToggle("全图高亮", FullbrightEnabled, function(value)
-    FullbrightEnabled = value
-    applyFullbright(value)
+local setTab = win:CreateTab("⚙️常规功能⚙️")
+setTab:AddToggle("全图高亮", false, function(v)
+    FullbrightEnabled = v; applyFullbright(v)
 end)
-SettingsTab:AddToggle("无碰撞", NoclipEnabled, function(value)
-    toggleNoclip(value)
+setTab:AddToggle("无碰撞", false, function(v)
+    toggleNoclip(v)
 end)
 
-local ESPTab = MainWindow:CreateTab("👁️透视👁️")
-ESPTab:AddToggle("玩家ESP", PlayerESPEnabled, function(value)
-    PlayerESPEnabled = value
-    if value then
-        enablePlayerESP()
-    else
-        disablePlayerESP()
-    end
+local espTab = win:CreateTab("👁️透视👁️")
+espTab:AddToggle("玩家ESP", false, function(v)
+    PlayerESPEnabled = v
+    if v then enablePlayerESP() else disablePlayerESP() end
 end)
-ESPTab:AddToggle("NPCs ESP", NPCESPEnabled, function(value)
-    NPCESPEnabled = value
-    if value then
-        enableNPCESP()
-    else
-        disableNPCESP()
-    end
+espTab:AddToggle("NPCs ESP", false, function(v)
+    NPCESPEnabled = v
+    if v then enableNPCESP() else disableNPCESP() end
 end)
 
 WindUI.Notify({
