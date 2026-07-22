@@ -1,7 +1,3 @@
---[[
-    WindUI - 简洁 UI 库
-    最终修复：左侧标签使用 ScrollingFrame 保证显示，动画中心缩放+整体透明度
-]]
 WindUI = {}
 local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
@@ -24,7 +20,7 @@ local function CreateWindow(data)
         Parent = LocalPlayer:WaitForChild("PlayerGui")
     })
 
-    -- 主框架（中心锚点）
+    -- 主框架（中心锚点，原地缩放）
     local main = create("Frame", {
         AnchorPoint = Vector2.new(0.5, 0.5),
         Size = UDim2.new(0, 460, 0, 380),
@@ -32,11 +28,12 @@ local function CreateWindow(data)
         BackgroundColor3 = Color3.fromRGB(25, 25, 25),
         BorderSizePixel = 0,
         ClipsDescendants = true,
+        Active = true,
         Parent = scr
     })
     create("UICorner", { CornerRadius = UDim.new(0, 8), Parent = main })
 
-    -- 整体透明度控制容器
+    -- 整体透明度控制（所有子元素随此渐变）
     local canvasGroup = create("CanvasGroup", {
         Size = UDim2.new(1, 0, 1, 0),
         BackgroundTransparency = 1,
@@ -112,14 +109,12 @@ local function CreateWindow(data)
         Parent = canvasGroup
     })
 
-    -- 左侧标签列表（使用 ScrollingFrame 确保显示）
-    local leftPanel = create("ScrollingFrame", {
+    -- 左侧标签面板（不使用 ScrollingFrame，改为 Frame，确保按钮必然可见）
+    local leftPanel = create("Frame", {
         Size = UDim2.new(0, 120, 1, 0),
         BackgroundColor3 = Color3.fromRGB(35, 35, 35),
         BorderSizePixel = 0,
-        ScrollBarThickness = 4,
-        ScrollBarImageColor3 = Color3.fromRGB(120, 120, 120),
-        CanvasSize = UDim2.new(0, 0, 0, 0),
+        ClipsDescendants = false,
         Parent = contentContainer
     })
     create("UICorner", { CornerRadius = UDim.new(0, 6), Parent = leftPanel })
@@ -131,9 +126,6 @@ local function CreateWindow(data)
         Padding = UDim.new(0, 4),
         Parent = leftPanel
     })
-    leftLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
-        leftPanel.CanvasSize = UDim2.new(0, 0, 0, leftLayout.AbsoluteContentSize.Y + 12)
-    end)
 
     -- 右侧内容面板
     local rightPanel = create("Frame", {
@@ -150,11 +142,11 @@ local function CreateWindow(data)
 
     local function createTab(name)
         local tab = {}
-        -- 标签按钮（位于左侧 ScrollingFrame 内）
+        -- 左侧按钮（使用醒目颜色验证可见性）
         local btn = create("TextButton", {
             Name = name,
             Size = UDim2.new(1, -10, 0, 38),
-            BackgroundColor3 = Color3.fromRGB(45, 45, 45),
+            BackgroundColor3 = Color3.fromRGB(65, 65, 65),
             Text = name,
             TextColor3 = Color3.new(1, 1, 1),
             Font = Enum.Font.SourceSans,
@@ -303,7 +295,7 @@ local function CreateWindow(data)
     window.CreateTab = createTab
     window.Destroy = function() scr:Destroy() end
 
-    -- 动画系统（中心缩放 + CanvasGroup 透明度）
+    -- 动画系统（中心缩放 + CanvasGroup 整体透明度渐变）
     local minimized = false
     local savedSize = main.Size
     local minSize = UDim2.new(0, 345, 0, 285)
@@ -396,41 +388,41 @@ local function CreateWindow(data)
         end
     end)
 
-    -- 拖动逻辑（排除关闭/最小化按钮）
+    -- 全窗口拖动（排除所有按钮）
     local dragging = false
     local dragOffset = Vector2.new()
     local dragTarget = nil
 
-    local function isInsideButton(pos, button)
-        local bp = button.AbsolutePosition
-        local bs = button.AbsoluteSize
-        return pos.X >= bp.X and pos.X <= bp.X + bs.X and pos.Y >= bp.Y and pos.Y <= bp.Y + bs.Y
-    end
-
     local function onInputBegan(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
             local pos = Vector2.new(input.Position.X, input.Position.Y)
-            if main.Visible then
-                if isInsideButton(pos, closeBtn) or isInsideButton(pos, minBtn) then
-                    return
-                end
-                local tbPos = titleBar.AbsolutePosition
-                local tbSize = titleBar.AbsoluteSize
-                if pos.X >= tbPos.X and pos.X <= tbPos.X + tbSize.X and pos.Y >= tbPos.Y and pos.Y <= tbPos.Y + tbSize.Y then
-                    dragging = true
-                    dragOffset = pos - Vector2.new(main.AbsolutePosition.X, main.AbsolutePosition.Y)
-                    dragTarget = main
-                    return
+            -- 检查点击位置下方是否有任何按钮（包括文字按钮、图像按钮）
+            local guiObjects = UserInputService:GetGuiObjectsAtPosition(pos.X, pos.Y)
+            local foundButton = false
+            for _, obj in ipairs(guiObjects) do
+                if obj:IsA("TextButton") or obj:IsA("ImageButton") then
+                    foundButton = true
+                    break
                 end
             end
-            if miniBar.Visible then
-                local dhPos = dragHandle.AbsolutePosition
-                local dhSize = dragHandle.AbsoluteSize
-                if pos.X >= dhPos.X and pos.X <= dhPos.X + dhSize.X and pos.Y >= dhPos.Y and pos.Y <= dhPos.Y + dhSize.Y then
+            if foundButton then return end
+
+            -- 开始拖动主窗口或迷你条
+            if main.Visible then
+                local mainPos = main.AbsolutePosition
+                local mainSize = main.AbsoluteSize
+                if pos.X >= mainPos.X and pos.X <= mainPos.X + mainSize.X and pos.Y >= mainPos.Y and pos.Y <= mainPos.Y + mainSize.Y then
                     dragging = true
-                    dragOffset = pos - Vector2.new(miniBar.AbsolutePosition.X, miniBar.AbsolutePosition.Y)
+                    dragOffset = pos - mainPos
+                    dragTarget = main
+                end
+            elseif miniBar.Visible then
+                local mbPos = miniBar.AbsolutePosition
+                local mbSize = miniBar.AbsoluteSize
+                if pos.X >= mbPos.X and pos.X <= mbPos.X + mbSize.X and pos.Y >= mbPos.Y and pos.Y <= mbPos.Y + mbSize.Y then
+                    dragging = true
+                    dragOffset = pos - mbPos
                     dragTarget = miniBar
-                    return
                 end
             end
         end
@@ -457,7 +449,7 @@ local function CreateWindow(data)
     return window
 end
 
--- 通知系统（文本保持不变）
+-- 通知系统
 local notificationContainer = nil
 local function Notify(data)
     if not notificationContainer then
@@ -547,9 +539,7 @@ end
 
 WindUI.CreateWindow = CreateWindow
 WindUI.Notify = Notify
---[[
-    全局服务、全图高亮、无碰撞、NPC检测、ESP标签管理
-]]
+
 local Workspace = game:GetService("Workspace")
 local Lighting = game:GetService("Lighting")
 local RunService = game:GetService("RunService")
@@ -742,9 +732,7 @@ local function updateTag(target)
     local hpText = (type(hp) == "number") and ("HP: " .. hp) or "HP: ??"
     label.Text = name .. " | " .. string.format("%.1f", distance) .. " m | " .. hpText
 end
---[[
-    玩家与NPC ESP 启用/禁用，使用 DescendantAdded 事件驱动
-]]
+
 local playerESPConnection = nil
 local function enablePlayerESP()
     if playerESPConnection then return end
@@ -834,10 +822,7 @@ local function disableNPCESP()
     end
     npcTags = {}
 end
---[[
-    心跳循环：每5帧更新标签文本，移除超距/失效标签
-    本地玩家重生时恢复无碰撞状态
-]]
+
 local frameCounter = 0
 RunService.Heartbeat:Connect(function()
     frameCounter = frameCounter + 1
@@ -911,9 +896,7 @@ LocalPlayer.CharacterAdded:Connect(function(char)
         toggleNoclip(true)
     end
 end)
---[[
-    创建主窗口与标签页，绑定所有功能开关，更新内容仅保留重置UI
-]]
+
 local MainWindow = WindUI.CreateWindow({
     Name = "Explorer Script",
     Description = "version：v0.2.0.5",
