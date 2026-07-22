@@ -248,7 +248,7 @@ local function CreateWindow(data)
     local minimized = false
     local savedPosition = main.Position
     local savedSize = main.Size
-    local targetMinSize = UDim2.new(0, 337.5, 0, 262.5) -- 75%
+    local targetMinSize = UDim2.new(0, 337.5, 0, 262.5)
 
     local miniBar = Instance.new("Frame")
     miniBar.Size = UDim2.new(0, 160, 0, 32)
@@ -261,19 +261,39 @@ local function CreateWindow(data)
     miniCorner.CornerRadius = UDim.new(1, 0)
     miniCorner.Parent = miniBar
 
-    local handle = Instance.new("Frame")
-    handle.Size = UDim2.new(0, 8, 1, -8)
-    handle.Position = UDim2.new(0, 4, 0.5, -4)
-    handle.BackgroundColor3 = Color3.fromRGB(180, 180, 180)
-    handle.BorderSizePixel = 0
-    handle.Parent = miniBar
-    local handleCorner = Instance.new("UICorner")
-    handleCorner.CornerRadius = UDim.new(1, 0)
-    handleCorner.Parent = handle
+    local dragHandle = Instance.new("Frame")
+    dragHandle.Size = UDim2.new(0, 16, 1, 0)
+    dragHandle.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+    dragHandle.BorderSizePixel = 0
+    dragHandle.Parent = miniBar
+    local dragCorner = Instance.new("UICorner")
+    dragCorner.CornerRadius = UDim.new(1, 0)
+    dragCorner.Parent = dragHandle
+
+    local handleIcon = Instance.new("TextLabel")
+    handleIcon.Size = UDim2.new(1, 0, 1, 0)
+    handleIcon.BackgroundTransparency = 1
+    handleIcon.Text = "⠿"
+    handleIcon.TextColor3 = Color3.fromRGB(180, 180, 180)
+    handleIcon.Font = Enum.Font.SourceSansBold
+    handleIcon.TextSize = 18
+    handleIcon.TextXAlignment = Enum.TextXAlignment.Center
+    handleIcon.TextYAlignment = Enum.TextYAlignment.Center
+    handleIcon.Parent = dragHandle
+
+    local divider = Instance.new("Frame")
+    divider.Size = UDim2.new(0, 2, 1, -8)
+    divider.Position = UDim2.new(0, 16, 0.5, -4)
+    divider.BackgroundColor3 = Color3.fromRGB(100, 100, 100)
+    divider.BorderSizePixel = 0
+    divider.Parent = miniBar
+    local divCorner = Instance.new("UICorner")
+    divCorner.CornerRadius = UDim.new(1, 0)
+    divCorner.Parent = divider
 
     local miniTitle = Instance.new("TextLabel")
     miniTitle.Size = UDim2.new(1, -20, 1, 0)
-    miniTitle.Position = UDim2.new(0, 16, 0, 0)
+    miniTitle.Position = UDim2.new(0, 22, 0, 0)
     miniTitle.BackgroundTransparency = 1
     miniTitle.Text = tostring(data.Name or "WindUI")
     miniTitle.TextColor3 = Color3.new(1, 1, 1)
@@ -323,15 +343,14 @@ local function CreateWindow(data)
         end
     end)
 
-    -- 点击小条（非把手区域）还原
     local function onMiniBarClick(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
             local pos = Vector2.new(input.Position.X, input.Position.Y)
             local mbPos = miniBar.AbsolutePosition
             local mbSize = miniBar.AbsoluteSize
             if pos.X >= mbPos.X and pos.X <= mbPos.X + mbSize.X and pos.Y >= mbPos.Y and pos.Y <= mbPos.Y + mbSize.Y then
-                local handlePos = handle.AbsolutePosition
-                local handleSize = handle.AbsoluteSize
+                local handlePos = dragHandle.AbsolutePosition
+                local handleSize = dragHandle.AbsoluteSize
                 if not (pos.X >= handlePos.X and pos.X <= handlePos.X + handleSize.X and pos.Y >= handlePos.Y and pos.Y <= handlePos.Y + handleSize.Y) then
                     minimized = false
                     animateRestore()
@@ -341,7 +360,6 @@ local function CreateWindow(data)
     end
     miniBar.InputBegan:Connect(onMiniBarClick)
 
-    -- 拖动处理
     local dragging = false
     local dragOffset = Vector2.new()
     local dragTarget = nil
@@ -363,8 +381,8 @@ local function CreateWindow(data)
                 local mbPos = miniBar.AbsolutePosition
                 local mbSize = miniBar.AbsoluteSize
                 if pos.X >= mbPos.X and pos.X <= mbPos.X + mbSize.X and pos.Y >= mbPos.Y and pos.Y <= mbPos.Y + mbSize.Y then
-                    local handlePos = handle.AbsolutePosition
-                    local handleSize = handle.AbsoluteSize
+                    local handlePos = dragHandle.AbsolutePosition
+                    local handleSize = dragHandle.AbsoluteSize
                     if pos.X >= handlePos.X and pos.X <= handlePos.X + handleSize.X and pos.Y >= handlePos.Y and pos.Y <= handlePos.Y + handleSize.Y then
                         dragging = true
                         dragOffset = pos - Vector2.new(miniBar.AbsolutePosition.X, miniBar.AbsolutePosition.Y)
@@ -428,8 +446,6 @@ local function Notify(data)
     local corner = Instance.new("UICorner")
     corner.CornerRadius = UDim.new(0, 6)
     corner.Parent = frame
-
-    -- 初始位置（右侧外）
     frame.Position = UDim2.new(1, 10, 0, 0)
 
     local title = Instance.new("TextLabel")
@@ -473,7 +489,6 @@ local function Notify(data)
     desc.TextWrapped = true
     desc.Parent = frame
 
-    -- 滑入动画
     local tweenInfo = TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
     TweenService:Create(frame, tweenInfo, {Position = UDim2.new(0, 0, 0, 0)}):Play()
 
