@@ -4,7 +4,327 @@ StarterGui:SetCore("SendNotification", {
     Text = "正在加载中…",
     Duration = 3
 })
-local WindUI = loadstring(game:HttpGet("https://raw.githubusercontent.com/Wind-UI/Wind-UI/main/Source.lua"))()
+
+local Players = game:GetService("Players")
+local TweenService = game:GetService("TweenService")
+local UserInputService = game:GetService("UserInputService")
+local LocalPlayer = Players.LocalPlayer
+
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "ExplorerScriptUI"
+ScreenGui.ResetOnSpawn = false
+ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
+
+local MainFrame = Instance.new("Frame")
+MainFrame.Size = UDim2.new(0, 420, 0, 320)
+MainFrame.Position = UDim2.new(0.5, -210, 0.5, -160)
+MainFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+MainFrame.BorderSizePixel = 0
+MainFrame.ClipsDescendants = true
+MainFrame.Parent = ScreenGui
+
+local Corner = Instance.new("UICorner")
+Corner.CornerRadius = UDim.new(0, 6)
+Corner.Parent = MainFrame
+
+local TitleBar = Instance.new("Frame")
+TitleBar.Size = UDim2.new(1, 0, 0, 45)
+TitleBar.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
+TitleBar.Parent = MainFrame
+local TitleCorner = Instance.new("UICorner")
+TitleCorner.CornerRadius = UDim.new(0, 6)
+TitleCorner.Parent = TitleBar
+
+local Title = Instance.new("TextLabel")
+Title.Size = UDim2.new(1, -80, 0, 22)
+Title.Position = UDim2.new(0, 10, 0, 4)
+Title.BackgroundTransparency = 1
+Title.Text = "Explorer Script"
+Title.TextColor3 = Color3.new(1, 1, 1)
+Title.Font = Enum.Font.SourceSansBold
+Title.TextSize = 18
+Title.TextXAlignment = Enum.TextXAlignment.Left
+Title.Parent = TitleBar
+
+local SubTitle = Instance.new("TextLabel")
+SubTitle.Size = UDim2.new(1, -80, 0, 16)
+SubTitle.Position = UDim2.new(0, 10, 0, 26)
+SubTitle.BackgroundTransparency = 1
+SubTitle.Text = "version：v0.2.0.5"
+SubTitle.TextColor3 = Color3.fromRGB(180, 180, 180)
+SubTitle.Font = Enum.Font.SourceSans
+SubTitle.TextSize = 12
+SubTitle.TextXAlignment = Enum.TextXAlignment.Left
+SubTitle.Parent = TitleBar
+
+local CloseBtn = Instance.new("TextButton")
+CloseBtn.Size = UDim2.new(0, 30, 0, 30)
+CloseBtn.Position = UDim2.new(1, -35, 0, 7)
+CloseBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+CloseBtn.Text = "X"
+CloseBtn.TextColor3 = Color3.new(1,1,1)
+CloseBtn.Font = Enum.Font.SourceSansBold
+CloseBtn.TextSize = 16
+CloseBtn.Parent = TitleBar
+
+local MinBtn = Instance.new("TextButton")
+MinBtn.Size = UDim2.new(0, 30, 0, 30)
+MinBtn.Position = UDim2.new(1, -70, 0, 7)
+MinBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+MinBtn.Text = "-"
+MinBtn.TextColor3 = Color3.new(1,1,1)
+MinBtn.Font = Enum.Font.SourceSansBold
+MinBtn.TextSize = 20
+MinBtn.Parent = TitleBar
+
+local ContentContainer = Instance.new("Frame")
+ContentContainer.Size = UDim2.new(1, 0, 1, -45)
+ContentContainer.Position = UDim2.new(0, 0, 0, 45)
+ContentContainer.BackgroundTransparency = 1
+ContentContainer.ClipsDescendants = true
+ContentContainer.Parent = MainFrame
+
+local LeftPanel = Instance.new("Frame")
+LeftPanel.Size = UDim2.new(0, 110, 1, 0)
+LeftPanel.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+LeftPanel.BorderSizePixel = 0
+LeftPanel.Parent = ContentContainer
+
+local RightPanel = Instance.new("Frame")
+RightPanel.Size = UDim2.new(1, -110, 1, 0)
+RightPanel.Position = UDim2.new(0, 110, 0, 0)
+RightPanel.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+RightPanel.BorderSizePixel = 0
+RightPanel.Parent = ContentContainer
+
+local tabContainers = {}
+local function createTabContainer(name)
+    local sc = Instance.new("ScrollingFrame")
+    sc.Size = UDim2.new(1, 0, 1, 0)
+    sc.BackgroundTransparency = 1
+    sc.ScrollBarThickness = 4
+    sc.ScrollBarImageColor3 = Color3.fromRGB(150, 150, 150)
+    sc.CanvasSize = UDim2.new(0, 0, 0, 0)
+    sc.ClipsDescendants = true
+    sc.Visible = false
+    sc.Parent = RightPanel
+
+    local container = Instance.new("Frame")
+    container.Size = UDim2.new(1, -20, 0, 0)
+    container.Position = UDim2.new(0, 10, 0, 5)
+    container.BackgroundTransparency = 1
+    container.Parent = sc
+
+    local layout = Instance.new("UIListLayout")
+    layout.FillDirection = Enum.FillDirection.Vertical
+    layout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+    layout.VerticalAlignment = Enum.VerticalAlignment.Top
+    layout.Padding = UDim.new(0, 6)
+    layout.Parent = container
+    layout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+        sc.CanvasSize = UDim2.new(0, 0, 0, layout.AbsoluteContentSize.Y + 10)
+    end)
+
+    tabContainers[name] = {Scroller = sc, Container = container, Layout = layout}
+    return sc, container, layout
+end
+
+local function showTab(name)
+    for tabName, data in pairs(tabContainers) do
+        data.Scroller.Visible = (tabName == name)
+    end
+end
+
+local tabButtons = {}
+local function createTabButton(text, tabName, yPos)
+    local btn = Instance.new("TextButton")
+    btn.Size = UDim2.new(1, 0, 0, 35)
+    btn.Position = UDim2.new(0, 0, 0, yPos)
+    btn.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
+    btn.Text = text
+    btn.TextColor3 = Color3.new(1, 1, 1)
+    btn.Font = Enum.Font.SourceSans
+    btn.TextSize = 16
+    btn.Parent = LeftPanel
+    btn.MouseButton1Click:Connect(function()
+        for _, b in pairs(tabButtons) do
+            b.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
+        end
+        btn.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+        showTab(tabName)
+    end)
+    table.insert(tabButtons, btn)
+    return btn
+end
+
+local updateSc, updateCont, updateLayout = createTabContainer("更新公告")
+local setSc, setCont, setLayout = createTabContainer("基础功能")
+local espSc, espCont, espLayout = createTabContainer("透视")
+
+createTabButton("更新公告", "更新公告", 0)
+createTabButton("基础功能", "基础功能", 40)
+createTabButton("透视", "透视", 80)
+
+showTab("更新公告")
+if #tabButtons > 0 then tabButtons[1].BackgroundColor3 = Color3.fromRGB(60, 60, 60) end
+
+local function addLabel(container, text)
+    local lbl = Instance.new("TextLabel")
+    lbl.Size = UDim2.new(1, 0, 0, 24)
+    lbl.BackgroundTransparency = 1
+    lbl.Text = text
+    lbl.TextColor3 = Color3.new(1, 1, 1)
+    lbl.Font = Enum.Font.SourceSans
+    lbl.TextSize = 15
+    lbl.TextXAlignment = Enum.TextXAlignment.Left
+    lbl.TextWrapped = true
+    lbl.Parent = container
+    return lbl
+end
+
+local function addToggle(container, labelText, initialState, callback)
+    local row = Instance.new("Frame")
+    row.Size = UDim2.new(1, 0, 0, 32)
+    row.BackgroundTransparency = 1
+    row.Parent = container
+
+    local label = Instance.new("TextLabel")
+    label.Size = UDim2.new(0.65, -10, 1, 0)
+    label.Position = UDim2.new(0, 0, 0, 0)
+    label.BackgroundTransparency = 1
+    label.Text = labelText
+    label.TextColor3 = Color3.new(1, 1, 1)
+    label.Font = Enum.Font.SourceSans
+    label.TextSize = 15
+    label.TextXAlignment = Enum.TextXAlignment.Left
+    label.Parent = row
+
+    local toggleBtn = Instance.new("TextButton")
+    toggleBtn.Size = UDim2.new(0, 50, 0, 26)
+    toggleBtn.Position = UDim2.new(1, -50, 0.5, -13)
+    toggleBtn.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
+    toggleBtn.Text = ""
+    toggleBtn.Parent = row
+    local btnCorner = Instance.new("UICorner")
+    btnCorner.CornerRadius = UDim.new(0, 4)
+    btnCorner.Parent = toggleBtn
+
+    local dot = Instance.new("Frame")
+    dot.Size = UDim2.new(0, 22, 0, 22)
+    dot.Position = UDim2.new(0, 2, 0.5, -11)
+    dot.BackgroundColor3 = Color3.fromRGB(120, 120, 120)
+    dot.BorderSizePixel = 0
+    dot.Parent = toggleBtn
+    local dotCorner = Instance.new("UICorner")
+    dotCorner.CornerRadius = UDim.new(1, 0)
+    dotCorner.Parent = dot
+
+    local state = initialState
+    local function updateVisual(isOn)
+        local targetPos, targetColor, bgColor
+        if isOn then
+            targetPos = UDim2.new(1, -24, 0.5, -11)
+            targetColor = Color3.fromRGB(255, 255, 255)
+            bgColor = Color3.fromRGB(46, 204, 113)
+        else
+            targetPos = UDim2.new(0, 2, 0.5, -11)
+            targetColor = Color3.fromRGB(120, 120, 120)
+            bgColor = Color3.fromRGB(80, 80, 80)
+        end
+        local tween = TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+        TweenService:Create(dot, tween, {Position = targetPos, BackgroundColor3 = targetColor}):Play()
+        TweenService:Create(toggleBtn, tween, {BackgroundColor3 = bgColor}):Play()
+    end
+    updateVisual(state)
+
+    toggleBtn.MouseButton1Click:Connect(function()
+        state = not state
+        callback(state)
+        updateVisual(state)
+    end)
+    return row
+end
+
+local function addButton(container, labelText, callback)
+    local row = Instance.new("Frame")
+    row.Size = UDim2.new(1, 0, 0, 32)
+    row.BackgroundTransparency = 1
+    row.Parent = container
+
+    local btn = Instance.new("TextButton")
+    btn.Size = UDim2.new(1, -20, 1, 0)
+    btn.Position = UDim2.new(0, 10, 0, 0)
+    btn.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+    btn.Text = labelText
+    btn.TextColor3 = Color3.new(1, 1, 1)
+    btn.Font = Enum.Font.SourceSans
+    btn.TextSize = 15
+    btn.Parent = row
+    local btnCorner = Instance.new("UICorner")
+    btnCorner.CornerRadius = UDim.new(0, 4)
+    btnCorner.Parent = btn
+
+    btn.MouseButton1Click:Connect(callback)
+    return row
+end
+
+addLabel(updateCont, "version：v0.2.0.5")
+addLabel(updateCont, "▪重置UI。")
+
+local UI = {
+    Containers = {
+        Settings = setCont,
+        ESP = espCont
+    },
+    AddToggle = addToggle,
+    AddButton = addButton,
+    AddLabel = addLabel,
+    Close = function()
+        for target, tag in pairs(playerTags) do tag:Destroy() end
+        for target, tag in pairs(npcTags) do tag:Destroy() end
+        ScreenGui:Destroy()
+    end
+}
+
+local dragging = false
+local dragOffset = Vector2.new()
+UserInputService.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        local pos = Vector2.new(input.Position.X, input.Position.Y)
+        local tbPos = TitleBar.AbsolutePosition
+        local tbSize = TitleBar.AbsoluteSize
+        if pos.X >= tbPos.X and pos.X <= tbPos.X + tbSize.X and pos.Y >= tbPos.Y and pos.Y <= tbPos.Y + tbSize.Y then
+            dragging = true
+            dragOffset = pos - Vector2.new(MainFrame.AbsolutePosition.X, MainFrame.AbsolutePosition.Y)
+        end
+    end
+end)
+UserInputService.InputChanged:Connect(function(input)
+    if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
+        local pos = Vector2.new(input.Position.X, input.Position.Y)
+        MainFrame.Position = UDim2.new(0, pos.X - dragOffset.X, 0, pos.Y - dragOffset.Y)
+    end
+end)
+UserInputService.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        dragging = false
+    end
+end)
+
+local minimized = false
+MinBtn.MouseButton1Click:Connect(function()
+    minimized = not minimized
+    local targetSize = minimized and UDim2.new(0, 420, 0, 45) or UDim2.new(0, 420, 0, 320)
+    TweenService:Create(MainFrame, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Size = targetSize}):Play()
+    MinBtn.Text = minimized and "+" or "-"
+    ContentContainer.Visible = not minimized
+end)
+
+CloseBtn.MouseButton1Click:Connect(function()
+    UI.Close()
+end)
+
+MainWindow = UI
 local Players = game:GetService("Players")
 local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
@@ -360,26 +680,24 @@ for _, player in pairs(Players:GetPlayers()) do
     onCharacterAdded(player)
 end
 Players.PlayerAdded:Connect(onCharacterAdded)
-local MainWindow = WindUI:CreateWindow({
-    Name = "Explorer Script",
-    Description = "version：v0.2.0.5",
-    Theme = "Dark",
-    Keybind = Enum.KeyCode.RightShift,
-    Folder = "ExplorerScript"
-})
-local UpdateTab = MainWindow:CreateTab("更新公告")
-UpdateTab:CreateLabel("version：v0.2.0.5")
-UpdateTab:CreateLabel("▪重置UI。")
-local SettingsTab = MainWindow:CreateTab("基础功能")
-SettingsTab:CreateToggle("全图高亮", FullbrightEnabled, function(value)
+MainWindow.AddToggle(MainWindow.Containers.Settings, "全图高亮", FullbrightEnabled, function(value)
     FullbrightEnabled = value
     applyFullbright(value)
 end)
-SettingsTab:CreateToggle("无碰撞", NoclipEnabled, function(value)
+MainWindow.AddToggle(MainWindow.Containers.Settings, "无碰撞", NoclipEnabled, function(value)
     toggleNoclip(value)
 end)
-local ESPTab = MainWindow:CreateTab("透视")
-ESPTab:CreateToggle("玩家ESP", PlayerESPEnabled, function(value)
+MainWindow.AddButton(MainWindow.Containers.Settings, "关闭脚本（清理所有功能）", function()
+    PlayerESPEnabled = false
+    NPCESPEnabled = false
+    FullbrightEnabled = false
+    if NoclipEnabled then toggleNoclip(false) end
+    applyFullbright(false)
+    clearAllESP()
+    MainWindow.Close()
+end)
+
+MainWindow.AddToggle(MainWindow.Containers.ESP, "玩家ESP", PlayerESPEnabled, function(value)
     PlayerESPEnabled = value
     if value then
         updatePlayerESP()
@@ -390,7 +708,7 @@ ESPTab:CreateToggle("玩家ESP", PlayerESPEnabled, function(value)
         playerTags = {}
     end
 end)
-ESPTab:CreateToggle("NPCs ESP", NPCESPEnabled, function(value)
+MainWindow.AddToggle(MainWindow.Containers.ESP, "NPCs ESP", NPCESPEnabled, function(value)
     NPCESPEnabled = value
     if value then
         updateNPCESP()
@@ -400,15 +718,6 @@ ESPTab:CreateToggle("NPCs ESP", NPCESPEnabled, function(value)
         end
         npcTags = {}
     end
-end)
-SettingsTab:CreateButton("关闭脚本（清理所有功能）", function()
-    PlayerESPEnabled = false
-    NPCESPEnabled = false
-    FullbrightEnabled = false
-    if NoclipEnabled then toggleNoclip(false) end
-    applyFullbright(false)
-    clearAllESP()
-    MainWindow:Destroy()
 end)
 StarterGui:SetCore("SendNotification", {
     Title = "ES脚本",
