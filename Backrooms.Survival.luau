@@ -251,8 +251,8 @@ local function CreateWindow(data)
     local targetMinSize = UDim2.new(0, 337.5, 0, 262.5)
 
     local miniBar = Instance.new("Frame")
-    miniBar.Size = UDim2.new(0, 180, 0, 34)
-    miniBar.Position = UDim2.new(0.5, -90, 0, 8)
+    miniBar.Size = UDim2.new(0, 200, 0, 34)
+    miniBar.Position = UDim2.new(0.5, -100, 0, 8)
     miniBar.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
     miniBar.BorderSizePixel = 0
     miniBar.Visible = false
@@ -261,8 +261,9 @@ local function CreateWindow(data)
     miniCorner.CornerRadius = UDim.new(1, 0)
     miniCorner.Parent = miniBar
 
+    -- 拖动区域 50px
     local dragHandle = Instance.new("Frame")
-    dragHandle.Size = UDim2.new(0, 26, 1, 0)
+    dragHandle.Size = UDim2.new(0, 50, 1, 0)
     dragHandle.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
     dragHandle.BorderSizePixel = 0
     dragHandle.Parent = miniBar
@@ -281,19 +282,20 @@ local function CreateWindow(data)
     handleIcon.TextYAlignment = Enum.TextYAlignment.Center
     handleIcon.Parent = dragHandle
 
+    -- 分隔线，从顶部对齐
     local divider = Instance.new("Frame")
-    divider.Size = UDim2.new(0, 2, 1, -4)
-    divider.Position = UDim2.new(0, 26, 0, 2)
-    divider.BackgroundColor3 = Color3.fromRGB(100, 100, 100)
+    divider.Size = UDim2.new(0, 2, 1, 0)
+    divider.Position = UDim2.new(0, 50, 0, 0)
+    divider.BackgroundColor3 = Color3.fromRGB(120, 120, 120)
     divider.BorderSizePixel = 0
     divider.Parent = miniBar
     local divCorner = Instance.new("UICorner")
-    divCorner.CornerRadius = UDim.new(1, 0)
+    divCorner.CornerRadius = UDim.new(0, 0)
     divCorner.Parent = divider
 
     local miniTitle = Instance.new("TextLabel")
-    miniTitle.Size = UDim2.new(1, -30, 1, 0)
-    miniTitle.Position = UDim2.new(0, 32, 0, 0)
+    miniTitle.Size = UDim2.new(1, -55, 1, 0)
+    miniTitle.Position = UDim2.new(0, 55, 0, 0)
     miniTitle.BackgroundTransparency = 1
     miniTitle.Text = tostring(data.Name or "WindUI")
     miniTitle.TextColor3 = Color3.new(1, 1, 1)
@@ -302,6 +304,7 @@ local function CreateWindow(data)
     miniTitle.TextXAlignment = Enum.TextXAlignment.Left
     miniTitle.Parent = miniBar
 
+    -- 动画函数
     local function animateMinimize()
         local tweenInfo = TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
         TweenService:Create(main, tweenInfo, {
@@ -343,6 +346,7 @@ local function CreateWindow(data)
         end
     end)
 
+    -- 点击小条（非拖动区域）还原，仅当鼠标点击时触发，不是触摸悬停
     local function onMiniBarClick(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
             local pos = Vector2.new(input.Position.X, input.Position.Y)
@@ -351,9 +355,12 @@ local function CreateWindow(data)
             if pos.X >= mbPos.X and pos.X <= mbPos.X + mbSize.X and pos.Y >= mbPos.Y and pos.Y <= mbPos.Y + mbSize.Y then
                 local handlePos = dragHandle.AbsolutePosition
                 local handleSize = dragHandle.AbsoluteSize
+                -- 只有点击非拖动区域才还原
                 if not (pos.X >= handlePos.X and pos.X <= handlePos.X + handleSize.X and pos.Y >= handlePos.Y and pos.Y <= handlePos.Y + handleSize.Y) then
-                    minimized = false
-                    animateRestore()
+                    if minimized then
+                        minimized = false
+                        animateRestore()
+                    end
                 end
             end
         end
@@ -508,7 +515,6 @@ end
 
 WindUI.CreateWindow = CreateWindow
 WindUI.Notify = Notify
-
 local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
 local Lighting = game:GetService("Lighting")
@@ -679,7 +685,6 @@ local function clearAllESP()
     npcTags = {}
     tagCreationTime = {}
 end
-
 local function updatePlayerESP()
     if PlayerESPEnabled then
         for _, target in pairs(Workspace:GetDescendants()) do
@@ -846,7 +851,6 @@ for _, player in pairs(Players:GetPlayers()) do
     onCharacterAdded(player)
 end
 Players.PlayerAdded:Connect(onCharacterAdded)
-
 local MainWindow = WindUI.CreateWindow({
     Name = "Explorer Script",
     Description = "version：v0.2.0.5",
@@ -887,7 +891,6 @@ ESPTab:AddToggle("NPCs ESP", NPCESPEnabled, function(value)
         npcTags = {}
     end
 end)
-
 WindUI.Notify({
     Title = "ES脚本",
     Text = "加载成功。该脚本完全免费，如果你通过支付渠道获得该脚本，恭喜你被骗了😇",
