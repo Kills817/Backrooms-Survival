@@ -1,6 +1,6 @@
 --[[
     WindUI - 简洁 UI 库
-    修复：左侧标签正常显示、初始右侧空白、最小化/还原带透明度动画
+    修复：左侧标签使用普通 Frame 确保显示、最小化/还原带透明度渐变
 ]]
 WindUI = {}
 local TweenService = game:GetService("TweenService")
@@ -31,6 +31,7 @@ local function CreateWindow(data)
         BackgroundColor3 = Color3.fromRGB(25, 25, 25),
         BorderSizePixel = 0,
         ClipsDescendants = true,
+        BackgroundTransparency = 0,
         Parent = scr
     })
     create("UICorner", { CornerRadius = UDim.new(0, 8), Parent = main })
@@ -103,14 +104,11 @@ local function CreateWindow(data)
         Parent = main
     })
 
-    -- 左侧标签列表（可滚动，确保按钮可见）
-    local leftPanel = create("ScrollingFrame", {
+    -- 左侧标签列表（改用普通 Frame，保证可见）
+    local leftPanel = create("Frame", {
         Size = UDim2.new(0, 120, 1, 0),
         BackgroundColor3 = Color3.fromRGB(35, 35, 35),
         BorderSizePixel = 0,
-        ScrollBarThickness = 4,
-        ScrollBarImageColor3 = Color3.fromRGB(120, 120, 120),
-        CanvasSize = UDim2.new(0, 0, 0, 0),
         Parent = contentContainer
     })
     create("UICorner", { CornerRadius = UDim.new(0, 6), Parent = leftPanel })
@@ -122,9 +120,6 @@ local function CreateWindow(data)
         Padding = UDim.new(0, 4),
         Parent = leftPanel
     })
-    leftLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
-        leftPanel.CanvasSize = UDim2.new(0, 0, 0, leftLayout.AbsoluteContentSize.Y + 12)
-    end)
 
     -- 右侧内容面板
     local rightPanel = create("Frame", {
@@ -141,7 +136,7 @@ local function CreateWindow(data)
 
     local function createTab(name)
         local tab = {}
-        -- 标签按钮（位于左侧）
+        -- 标签按钮（位于左侧 Frame）
         local btn = create("TextButton", {
             Name = name,
             Size = UDim2.new(1, -10, 0, 38),
@@ -162,7 +157,7 @@ local function CreateWindow(data)
             ScrollBarImageColor3 = Color3.fromRGB(80, 80, 80),
             CanvasSize = UDim2.new(0, 0, 0, 0),
             ClipsDescendants = true,
-            Visible = false,               -- 初始不显示任何标签内容
+            Visible = false,              -- 默认不显示
             Parent = rightPanel
         })
 
@@ -276,7 +271,7 @@ local function CreateWindow(data)
             btn2.Activated:Connect(callback)
         end
 
-        -- 标签切换逻辑
+        -- 标签切换
         btn.Activated:Connect(function()
             if currentTab then
                 currentTab.Button.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
@@ -288,14 +283,14 @@ local function CreateWindow(data)
         end)
 
         table.insert(tabButtons, btn)
-        -- 不再自动激活第一个标签，右侧初始留空
+        -- 不自动激活第一个标签，右侧留空
         return tab
     end
 
     window.CreateTab = createTab
     window.Destroy = function() scr:Destroy() end
 
-    -- 最小化 / 还原动画（含透明度淡入淡出）
+    -- 最小化 / 还原动画（大小 + 透明度渐变）
     local minimized = false
     local savedPosition = main.Position
     local savedSize = main.Size
@@ -331,7 +326,7 @@ local function CreateWindow(data)
         Parent = dragHandle
     })
 
-    -- 还原按钮（完整点击触发）
+    -- 还原按钮
     local restoreBtn = create("TextButton", {
         Size = UDim2.new(1, -54, 1, 0),
         Position = UDim2.new(0, 54, 0, 0),
@@ -351,7 +346,7 @@ local function CreateWindow(data)
         Parent = restoreBtn
     })
 
-    -- 最小化动画（同时缩小+淡出）
+    -- 最小化动画：缩小 + 淡出
     local function animateMinimize()
         savedPosition = main.Position
         savedSize = main.Size
@@ -370,11 +365,11 @@ local function CreateWindow(data)
         end)
     end
 
-    -- 还原动画（同时放大+淡入）
+    -- 还原动画：放大 + 淡入
     local function animateRestore()
         miniBar.Visible = false
         main.Visible = true
-        main.Size = targetMinSize   -- 先设为最小尺寸
+        main.Size = targetMinSize
         main.Position = UDim2.new(0.5, -targetMinSize.X.Offset/2, 0.5, -targetMinSize.Y.Offset/2)
         main.BackgroundTransparency = 1
         local tweenInfo = TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
@@ -419,8 +414,6 @@ local function CreateWindow(data)
     local function onInputBegan(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
             local pos = Vector2.new(input.Position.X, input.Position.Y)
-
-            -- 排除关闭/最小化按钮区域
             if main.Visible then
                 if isInsideButton(pos, closeBtn) or isInsideButton(pos, minBtn) then
                     return
@@ -558,6 +551,7 @@ end
 
 WindUI.CreateWindow = CreateWindow
 WindUI.Notify = Notify
+
 --[[
     全局服务、全图高亮、无碰撞、NPC检测、ESP标签管理
 ]]
@@ -753,6 +747,7 @@ local function updateTag(target)
     local hpText = (type(hp) == "number") and ("HP: " .. hp) or "HP: ??"
     label.Text = name .. " | " .. string.format("%.1f", distance) .. " m | " .. hpText
 end
+
 --[[
     玩家与NPC ESP 启用/禁用，使用 DescendantAdded 事件驱动
 ]]
@@ -845,6 +840,7 @@ local function disableNPCESP()
     end
     npcTags = {}
 end
+
 --[[
     心跳循环：每5帧更新标签文本，移除超距/失效标签
     本地玩家重生时恢复无碰撞状态
@@ -922,6 +918,7 @@ LocalPlayer.CharacterAdded:Connect(function(char)
         toggleNoclip(true)
     end
 end)
+
 --[[
     创建主窗口与标签页，绑定所有功能开关
 ]]
@@ -935,9 +932,9 @@ local MainWindow = WindUI.CreateWindow({
 
 local UpdateTab = MainWindow:CreateTab("🔍更新内容🔍")
 UpdateTab:AddLabel("v0.2.0.6")
-UpdateTab:AddLabel("▪ 左侧标签列表正常显示")
+UpdateTab:AddLabel("▪ 左侧标签正常显示")
 UpdateTab:AddLabel("▪ 初始右侧界面空白")
-UpdateTab:AddLabel("▪ 最小化/还原带透明度动画")
+UpdateTab:AddLabel("▪ 最小化/还原带透明度渐变")
 
 local SettingsTab = MainWindow:CreateTab("⚙️常规功能⚙️")
 SettingsTab:AddToggle("全图高亮", FullbrightEnabled, function(value)
