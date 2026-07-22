@@ -3,12 +3,14 @@ local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
+
 local function CreateWindow(data)
     local window = {}
     local scr = Instance.new("ScreenGui")
     scr.Name = data.Folder or "WindUI"
     scr.ResetOnSpawn = false
     scr.Parent = LocalPlayer:WaitForChild("PlayerGui")
+
     local main = Instance.new("Frame")
     main.Size = UDim2.new(0, 450, 0, 350)
     main.Position = UDim2.new(0.5, -225, 0.5, -175)
@@ -19,6 +21,7 @@ local function CreateWindow(data)
     local corner = Instance.new("UICorner")
     corner.CornerRadius = UDim.new(0, 6)
     corner.Parent = main
+
     local titleBar = Instance.new("Frame")
     titleBar.Size = UDim2.new(1, 0, 0, 40)
     titleBar.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
@@ -26,6 +29,7 @@ local function CreateWindow(data)
     local titleCorner = Instance.new("UICorner")
     titleCorner.CornerRadius = UDim.new(0, 6)
     titleCorner.Parent = titleBar
+
     local titleText = Instance.new("TextLabel")
     titleText.Size = UDim2.new(1, -80, 0, 20)
     titleText.Position = UDim2.new(0, 10, 0, 4)
@@ -36,6 +40,7 @@ local function CreateWindow(data)
     titleText.TextSize = 18
     titleText.TextXAlignment = Enum.TextXAlignment.Left
     titleText.Parent = titleBar
+
     local descText = Instance.new("TextLabel")
     descText.Size = UDim2.new(1, -80, 0, 16)
     descText.Position = UDim2.new(0, 10, 0, 24)
@@ -46,6 +51,7 @@ local function CreateWindow(data)
     descText.TextSize = 12
     descText.TextXAlignment = Enum.TextXAlignment.Left
     descText.Parent = titleBar
+
     local closeBtn = Instance.new("TextButton")
     closeBtn.Size = UDim2.new(0, 30, 0, 30)
     closeBtn.Position = UDim2.new(1, -35, 0, 5)
@@ -56,6 +62,7 @@ local function CreateWindow(data)
     closeBtn.TextSize = 16
     closeBtn.Parent = titleBar
     closeBtn.MouseButton1Click:Connect(function() scr:Destroy() end)
+
     local minBtn = Instance.new("TextButton")
     minBtn.Size = UDim2.new(0, 30, 0, 30)
     minBtn.Position = UDim2.new(1, -70, 0, 5)
@@ -65,33 +72,51 @@ local function CreateWindow(data)
     minBtn.Font = Enum.Font.SourceSansBold
     minBtn.TextSize = 20
     minBtn.Parent = titleBar
-    local content = Instance.new("Frame")
-    content.Size = UDim2.new(1, 0, 1, -40)
-    content.Position = UDim2.new(0, 0, 0, 40)
-    content.BackgroundTransparency = 1
-    content.ClipsDescendants = true
-    content.Parent = main
-    local tabs = {}
+
+    local contentContainer = Instance.new("Frame")
+    contentContainer.Size = UDim2.new(1, 0, 1, -40)
+    contentContainer.Position = UDim2.new(0, 0, 0, 40)
+    contentContainer.BackgroundTransparency = 1
+    contentContainer.ClipsDescendants = true
+    contentContainer.Parent = main
+
+    local leftPanel = Instance.new("Frame")
+    leftPanel.Size = UDim2.new(0, 110, 1, 0)
+    leftPanel.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
+    leftPanel.BorderSizePixel = 0
+    leftPanel.Parent = contentContainer
+
+    local rightPanel = Instance.new("Frame")
+    rightPanel.Size = UDim2.new(1, -110, 1, 0)
+    rightPanel.Position = UDim2.new(0, 110, 0, 0)
+    rightPanel.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+    rightPanel.BorderSizePixel = 0
+    rightPanel.Parent = contentContainer
+
+    local tabButtons = {}
+    local tabContainers = {}
     local currentTab = nil
+
     local function createTab(name)
         local tab = {}
         local btn = Instance.new("TextButton")
         btn.Size = UDim2.new(1, 0, 0, 35)
-        btn.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+        btn.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
         btn.Text = tostring(name)
         btn.TextColor3 = Color3.new(1, 1, 1)
         btn.Font = Enum.Font.SourceSans
         btn.TextSize = 16
-        btn.Parent = content
+        btn.Parent = leftPanel
+
         local container = Instance.new("ScrollingFrame")
         container.Size = UDim2.new(1, 0, 1, 0)
-        container.Position = UDim2.new(0, 0, 0, 0)
         container.BackgroundTransparency = 1
         container.ScrollBarThickness = 4
         container.CanvasSize = UDim2.new(0, 0, 0, 0)
         container.ClipsDescendants = true
         container.Visible = false
-        container.Parent = content
+        container.Parent = rightPanel
+
         local layout = Instance.new("UIListLayout")
         layout.FillDirection = Enum.FillDirection.Vertical
         layout.HorizontalAlignment = Enum.HorizontalAlignment.Center
@@ -101,9 +126,11 @@ local function CreateWindow(data)
         layout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
             container.CanvasSize = UDim2.new(0, 0, 0, layout.AbsoluteContentSize.Y + 10)
         end)
+
         tab.Button = btn
         tab.Container = container
         tab.Layout = layout
+
         tab.AddLabel = function(self, text)
             local lbl = Instance.new("TextLabel")
             lbl.Size = UDim2.new(1, -20, 0, 24)
@@ -117,6 +144,7 @@ local function CreateWindow(data)
             lbl.TextWrapped = true
             lbl.Parent = container
         end
+
         tab.AddToggle = function(self, labelText, initialState, callback)
             local row = Instance.new("Frame")
             row.Size = UDim2.new(1, 0, 0, 32)
@@ -173,6 +201,7 @@ local function CreateWindow(data)
                 update(state)
             end)
         end
+
         tab.AddButton = function(self, labelText, callback)
             local row = Instance.new("Frame")
             row.Size = UDim2.new(1, 0, 0, 32)
@@ -192,31 +221,37 @@ local function CreateWindow(data)
             bCorner.Parent = btn
             btn.MouseButton1Click:Connect(callback)
         end
+
         btn.MouseButton1Click:Connect(function()
             if currentTab then
-                currentTab.Button.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+                currentTab.Button.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
                 currentTab.Container.Visible = false
             end
-            btn.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
+            btn.BackgroundColor3 = Color3.fromRGB(65, 65, 65)
             container.Visible = true
             currentTab = tab
         end)
-        if #tabs == 0 then
-            btn.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
+
+        table.insert(tabButtons, btn)
+        table.insert(tabContainers, container)
+        if #tabContainers == 1 then
+            btn.BackgroundColor3 = Color3.fromRGB(65, 65, 65)
             container.Visible = true
             currentTab = tab
         end
-        table.insert(tabs, tab)
         return tab
     end
+
     window.CreateTab = createTab
     window.Destroy = function() scr:Destroy() end
+
     local minimized = false
     local savedPosition = main.Position
     local savedSize = main.Size
+
     local miniBar = Instance.new("Frame")
-    miniBar.Size = UDim2.new(0, 200, 0, 40)
-    miniBar.Position = UDim2.new(0.5, -100, 0, 0)
+    miniBar.Size = UDim2.new(0, 150, 0, 30)
+    miniBar.Position = UDim2.new(0.5, -75, 0, 10)
     miniBar.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
     miniBar.BorderSizePixel = 0
     miniBar.Visible = false
@@ -224,58 +259,84 @@ local function CreateWindow(data)
     local miniCorner = Instance.new("UICorner")
     miniCorner.CornerRadius = UDim.new(1, 0)
     miniCorner.Parent = miniBar
+
+    local handle = Instance.new("Frame")
+    handle.Size = UDim2.new(0, 4, 1, -8)
+    handle.Position = UDim2.new(0, 8, 0.5, -4)
+    handle.BackgroundColor3 = Color3.fromRGB(150, 150, 150)
+    handle.BorderSizePixel = 0
+    handle.Parent = miniBar
+    local handleCorner = Instance.new("UICorner")
+    handleCorner.CornerRadius = UDim.new(1, 0)
+    handleCorner.Parent = handle
+
     local miniTitle = Instance.new("TextLabel")
-    miniTitle.Size = UDim2.new(1, 0, 1, 0)
+    miniTitle.Size = UDim2.new(1, -20, 1, 0)
+    miniTitle.Position = UDim2.new(0, 16, 0, 0)
     miniTitle.BackgroundTransparency = 1
     miniTitle.Text = tostring(data.Name or "WindUI")
     miniTitle.TextColor3 = Color3.new(1, 1, 1)
     miniTitle.Font = Enum.Font.SourceSansBold
-    miniTitle.TextSize = 16
-    miniTitle.TextXAlignment = Enum.TextXAlignment.Center
+    miniTitle.TextSize = 14
+    miniTitle.TextXAlignment = Enum.TextXAlignment.Left
     miniTitle.Parent = miniBar
+
     miniBar.InputBegan:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
             minimized = false
+            local tweenInfo = TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
             miniBar.Visible = false
             main.Visible = true
-            main.Size = savedSize
+            main.Size = UDim2.new(0, 450, 0, 350)
             main.Position = savedPosition
+            TweenService:Create(main, tweenInfo, {Size = savedSize, Position = savedPosition, BackgroundTransparency = 0}):Play()
             minBtn.Text = "—"
-            content.Visible = true
+            contentContainer.Visible = true
         end
     end)
+
     minBtn.MouseButton1Click:Connect(function()
         minimized = not minimized
         if minimized then
             savedPosition = main.Position
             savedSize = main.Size
+            local tweenInfo = TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+            TweenService:Create(main, tweenInfo, {Size = UDim2.new(0, 0, 0, 0), Position = UDim2.new(0.5, 0, 0.5, 0), BackgroundTransparency = 1}):Play()
+            task.wait(0.3)
             main.Visible = false
             miniBar.Visible = true
-            miniBar.Position = UDim2.new(0.5, -100, 0, 10)
+            miniBar.Position = UDim2.new(0.5, -75, 0, 10)
             minBtn.Text = "+"
-            content.Visible = false
+            contentContainer.Visible = false
         else
             miniBar.Visible = false
             main.Visible = true
-            main.Size = savedSize
-            main.Position = savedPosition
+            main.Size = UDim2.new(0, 0, 0, 0)
+            main.Position = UDim2.new(0.5, 0, 0.5, 0)
+            main.BackgroundTransparency = 1
+            local tweenInfo = TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+            TweenService:Create(main, tweenInfo, {Size = savedSize, Position = savedPosition, BackgroundTransparency = 0}):Play()
             minBtn.Text = "—"
-            content.Visible = true
+            contentContainer.Visible = true
         end
     end)
+
     local dragging = false
     local dragOffset = Vector2.new()
     local dragTarget = nil
+
     local function onInputBegan(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
             local pos = Vector2.new(input.Position.X, input.Position.Y)
-            local tbPos = titleBar.AbsolutePosition
-            local tbSize = titleBar.AbsoluteSize
-            if main.Visible and pos.X >= tbPos.X and pos.X <= tbPos.X + tbSize.X and pos.Y >= tbPos.Y and pos.Y <= tbPos.Y + tbSize.Y then
-                dragging = true
-                dragOffset = pos - Vector2.new(main.AbsolutePosition.X, main.AbsolutePosition.Y)
-                dragTarget = main
-                return
+            if main.Visible then
+                local tbPos = titleBar.AbsolutePosition
+                local tbSize = titleBar.AbsoluteSize
+                if pos.X >= tbPos.X and pos.X <= tbPos.X + tbSize.X and pos.Y >= tbPos.Y and pos.Y <= tbPos.Y + tbSize.Y then
+                    dragging = true
+                    dragOffset = pos - Vector2.new(main.AbsolutePosition.X, main.AbsolutePosition.Y)
+                    dragTarget = main
+                    return
+                end
             end
             if miniBar.Visible then
                 local mbPos = miniBar.AbsolutePosition
@@ -289,79 +350,118 @@ local function CreateWindow(data)
             end
         end
     end
+
     local function onInputChanged(input)
         if dragging and dragTarget and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
             local pos = Vector2.new(input.Position.X, input.Position.Y)
             dragTarget.Position = UDim2.new(0, pos.X - dragOffset.X, 0, pos.Y - dragOffset.Y)
         end
     end
+
     local function onInputEnded(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
             dragging = false
             dragTarget = nil
         end
     end
+
     UserInputService.InputBegan:Connect(onInputBegan)
     UserInputService.InputChanged:Connect(onInputChanged)
     UserInputService.InputEnded:Connect(onInputEnded)
+
     return window
 end
+
+local notificationContainer = nil
+local notificationQueue = {}
+local maxNotifications = 8
+
+local function createNotificationContainer()
+    if notificationContainer then return end
+    notificationContainer = Instance.new("Frame")
+    notificationContainer.Name = "NotificationContainer"
+    notificationContainer.Size = UDim2.new(0, 320, 0, 0)
+    notificationContainer.Position = UDim2.new(1, -330, 1, -10)
+    notificationContainer.BackgroundTransparency = 1
+    notificationContainer.Parent = LocalPlayer:WaitForChild("PlayerGui")
+    local layout = Instance.new("UIListLayout")
+    layout.FillDirection = Enum.FillDirection.Vertical
+    layout.VerticalAlignment = Enum.VerticalAlignment.Bottom
+    layout.HorizontalAlignment = Enum.HorizontalAlignment.Right
+    layout.Padding = UDim.new(0, 6)
+    layout.Parent = notificationContainer
+    layout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+        notificationContainer.Size = UDim2.new(0, 320, 0, layout.AbsoluteContentSize.Y + 10)
+    end)
+end
+
 local function Notify(data)
-    local gui = Instance.new("ScreenGui")
-    gui.Name = "WindUINotification"
-    gui.ResetOnSpawn = false
-    gui.Parent = LocalPlayer:WaitForChild("PlayerGui")
+    createNotificationContainer()
     local frame = Instance.new("Frame")
-    frame.Size = UDim2.new(0, 350, 0, 120)
-    frame.Position = UDim2.new(0.5, -175, 0.5, -60)
-    frame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+    frame.Size = UDim2.new(0, 300, 0, 70)
+    frame.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
     frame.BorderSizePixel = 0
-    frame.Parent = gui
+    frame.ClipsDescendants = true
+    frame.Parent = notificationContainer
     local corner = Instance.new("UICorner")
-    corner.CornerRadius = UDim.new(0, 8)
+    corner.CornerRadius = UDim.new(0, 6)
     corner.Parent = frame
+
     local title = Instance.new("TextLabel")
-    title.Size = UDim2.new(1, -20, 0, 30)
-    title.Position = UDim2.new(0, 10, 0, 10)
+    title.Size = UDim2.new(1, -40, 0, 24)
+    title.Position = UDim2.new(0, 10, 0, 4)
     title.BackgroundTransparency = 1
     title.Text = tostring(data.Title or "通知")
     title.TextColor3 = Color3.new(1, 1, 1)
     title.Font = Enum.Font.SourceSansBold
-    title.TextSize = 20
+    title.TextSize = 16
     title.TextXAlignment = Enum.TextXAlignment.Left
+    title.TextYAlignment = Enum.TextYAlignment.Top
     title.Parent = frame
+
+    local closeBtn = Instance.new("TextButton")
+    closeBtn.Size = UDim2.new(0, 24, 0, 24)
+    closeBtn.Position = UDim2.new(1, -30, 0, 4)
+    closeBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+    closeBtn.Text = "✕"
+    closeBtn.TextColor3 = Color3.new(1, 1, 1)
+    closeBtn.Font = Enum.Font.SourceSansBold
+    closeBtn.TextSize = 14
+    closeBtn.Parent = frame
+    local btnCorner = Instance.new("UICorner")
+    btnCorner.CornerRadius = UDim.new(0, 4)
+    btnCorner.Parent = closeBtn
+    closeBtn.MouseButton1Click:Connect(function()
+        frame:Destroy()
+    end)
+
     local desc = Instance.new("TextLabel")
-    desc.Size = UDim2.new(1, -20, 0, 40)
-    desc.Position = UDim2.new(0, 10, 0, 40)
+    desc.Size = UDim2.new(1, -20, 0, 30)
+    desc.Position = UDim2.new(0, 10, 0, 30)
     desc.BackgroundTransparency = 1
     desc.Text = tostring(data.Text or "")
     desc.TextColor3 = Color3.fromRGB(200, 200, 200)
     desc.Font = Enum.Font.SourceSans
-    desc.TextSize = 14
+    desc.TextSize = 13
     desc.TextXAlignment = Enum.TextXAlignment.Left
+    desc.TextYAlignment = Enum.TextYAlignment.Top
     desc.TextWrapped = true
     desc.Parent = frame
-    local okBtn = Instance.new("TextButton")
-    okBtn.Size = UDim2.new(0, 80, 0, 30)
-    okBtn.Position = UDim2.new(1, -90, 1, -40)
-    okBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
-    okBtn.Text = "确定"
-    okBtn.TextColor3 = Color3.new(1, 1, 1)
-    okBtn.Font = Enum.Font.SourceSansBold
-    okBtn.TextSize = 16
-    okBtn.Parent = frame
-    local btnCorner = Instance.new("UICorner")
-    btnCorner.CornerRadius = UDim.new(0, 4)
-    btnCorner.Parent = okBtn
-    okBtn.MouseButton1Click:Connect(function() gui:Destroy() end)
-    local duration = data.Duration or 0
+
+    local duration = data.Duration or 4
     if duration > 0 then
-        task.wait(duration)
-        gui:Destroy()
+        task.spawn(function()
+            task.wait(duration)
+            if frame and frame.Parent then
+                frame:Destroy()
+            end
+        end)
     end
 end
+
 WindUI.CreateWindow = CreateWindow
 WindUI.Notify = Notify
+
 local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
 local Lighting = game:GetService("Lighting")
@@ -532,6 +632,7 @@ local function clearAllESP()
     npcTags = {}
     tagCreationTime = {}
 end
+
 local function updatePlayerESP()
     if PlayerESPEnabled then
         for _, target in pairs(Workspace:GetDescendants()) do
@@ -698,6 +799,7 @@ for _, player in pairs(Players:GetPlayers()) do
     onCharacterAdded(player)
 end
 Players.PlayerAdded:Connect(onCharacterAdded)
+
 local MainWindow = WindUI.CreateWindow({
     Name = "Explorer Script",
     Description = "version：v0.2.0.5",
@@ -735,6 +837,7 @@ ESPTab:AddToggle("NPCs ESP", NPCESPEnabled, function(value)
         npcTags = {}
     end
 end)
+
 WindUI.Notify({
     Title = "ES脚本",
     Text = "加载成功。该脚本完全免费，如果你通过支付渠道获得该脚本，恭喜你被骗了😇",
