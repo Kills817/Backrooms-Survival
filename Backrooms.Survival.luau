@@ -1,7 +1,7 @@
 --[[
-    WindUI - 简洁的 UI 库 + 通知系统
-    修复：Tab 内容正确显示、最小化还原改为点击触发（非触摸即发）
-    优化：滚动条厚度、颜色、布局间距，更人性化
+    WindUI - 简洁 UI 库
+    修复：左侧标签列表使用 ScrollingFrame+UIListLayout 正确排列
+    优化：关闭/最小化/还原均使用 Activated 事件，兼容触摸与鼠标
 ]]
 WindUI = {}
 local TweenService = game:GetService("TweenService")
@@ -9,7 +9,6 @@ local UserInputService = game:GetService("UserInputService")
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 
--- 帮助函数：快速创建 GUI 对象
 local function create(className, props)
     local obj = Instance.new(className)
     for k, v in pairs(props) do
@@ -18,7 +17,6 @@ local function create(className, props)
     return obj
 end
 
--- 创建窗口
 local function CreateWindow(data)
     local window = {}
     local scr = create("ScreenGui", {
@@ -70,19 +68,21 @@ local function CreateWindow(data)
         Parent = titleBar
     })
 
-    -- 关闭 / 最小化按钮
+    -- 关闭按钮
     local closeBtn = create("TextButton", {
         Size = UDim2.new(0, 30, 0, 30),
         Position = UDim2.new(1, -35, 0, 5),
         BackgroundColor3 = Color3.fromRGB(200, 50, 50),
-        Text = "✕",
+        Text = "✕",              -- 修复显示符号
         TextColor3 = Color3.new(1, 1, 1),
         Font = Enum.Font.SourceSansBold,
         TextSize = 16,
         Parent = titleBar
     })
-    closeBtn.MouseButton1Click:Connect(function() scr:Destroy() end)
+    create("UICorner", { CornerRadius = UDim.new(0, 4), Parent = closeBtn })
+    closeBtn.Activated:Connect(function() scr:Destroy() end)  -- 使用 Activated 事件
 
+    -- 最小化按钮
     local minBtn = create("TextButton", {
         Size = UDim2.new(0, 30, 0, 30),
         Position = UDim2.new(1, -70, 0, 5),
@@ -93,8 +93,9 @@ local function CreateWindow(data)
         TextSize = 20,
         Parent = titleBar
     })
+    create("UICorner", { CornerRadius = UDim.new(0, 4), Parent = minBtn })
 
-    -- 内容区域
+    -- 内容容器
     local contentContainer = create("Frame", {
         Size = UDim2.new(1, 0, 1, -40),
         Position = UDim2.new(0, 0, 0, 40),
@@ -103,13 +104,28 @@ local function CreateWindow(data)
         Parent = main
     })
 
-    local leftPanel = create("Frame", {
+    -- 左侧标签列表 (修复：改为可滚动的 ScrollingFrame + UIListLayout)
+    local leftPanel = create("ScrollingFrame", {
         Size = UDim2.new(0, 110, 1, 0),
         BackgroundColor3 = Color3.fromRGB(30, 30, 30),
         BorderSizePixel = 0,
+        ScrollBarThickness = 4,
+        ScrollBarImageColor3 = Color3.fromRGB(120, 120, 120),
+        CanvasSize = UDim2.new(0, 0, 0, 0),
         Parent = contentContainer
     })
+    local leftLayout = create("UIListLayout", {
+        FillDirection = Enum.FillDirection.Vertical,
+        HorizontalAlignment = Enum.HorizontalAlignment.Center,
+        VerticalAlignment = Enum.VerticalAlignment.Top,
+        Padding = UDim.new(0, 2),
+        Parent = leftPanel
+    })
+    leftLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+        leftPanel.CanvasSize = UDim2.new(0, 0, 0, leftLayout.AbsoluteContentSize.Y + 8)
+    end)
 
+    -- 右侧内容面板
     local rightPanel = create("Frame", {
         Size = UDim2.new(1, -110, 1, 0),
         Position = UDim2.new(0, 110, 0, 0),
@@ -118,17 +134,14 @@ local function CreateWindow(data)
         Parent = contentContainer
     })
 
-    -- 左侧标签按钮列表
     local tabButtons = {}
     local currentTab = nil
 
-    -- 创建标签页
     local function createTab(name)
         local tab = {}
-        
-        -- 标签按钮
+        -- 标签按钮（位于左侧滚动列表中）
         local btn = create("TextButton", {
-            Size = UDim2.new(1, 0, 0, 35),
+            Size = UDim2.new(1, -8, 0, 35),  -- 左右留白
             BackgroundColor3 = Color3.fromRGB(40, 40, 40),
             Text = tostring(name),
             TextColor3 = Color3.new(1, 1, 1),
@@ -136,8 +149,10 @@ local function CreateWindow(data)
             TextSize = 15,
             Parent = leftPanel
         })
+        create("UICorner", { CornerRadius = UDim.new(0, 4), Parent = btn })
+        btn.LayoutOrder = #tabButtons + 1  -- 顺序
 
-        -- 右侧滚动容器
+        -- 右侧容器
         local container = create("ScrollingFrame", {
             Size = UDim2.new(1, 0, 1, 0),
             BackgroundTransparency = 1,
@@ -163,11 +178,9 @@ local function CreateWindow(data)
         tab.Button = btn
         tab.Container = container
 
-        -- 添加标签
         tab.AddLabel = function(self, text)
-            local lbl = create("TextLabel", {
+            create("TextLabel", {
                 Size = UDim2.new(1, -20, 0, 24),
-                Position = UDim2.new(0, 10, 0, 0),
                 BackgroundTransparency = 1,
                 Text = tostring(text),
                 TextColor3 = Color3.new(1, 1, 1),
@@ -179,14 +192,13 @@ local function CreateWindow(data)
             })
         end
 
-        -- 添加开关
         tab.AddToggle = function(self, labelText, initialState, callback)
             local row = create("Frame", {
                 Size = UDim2.new(1, 0, 0, 32),
                 BackgroundTransparency = 1,
                 Parent = container
             })
-            local label = create("TextLabel", {
+            create("TextLabel", {
                 Size = UDim2.new(0.65, -10, 1, 0),
                 Position = UDim2.new(0, 8, 0, 0),
                 BackgroundTransparency = 1,
@@ -232,23 +244,22 @@ local function CreateWindow(data)
             end
             update(state)
 
-            toggle.MouseButton1Click:Connect(function()
+            toggle.Activated:Connect(function()  -- 同样使用 Activated
                 state = not state
                 callback(state)
                 update(state)
             end)
         end
 
-        -- 添加按钮
         tab.AddButton = function(self, labelText, callback)
             local row = create("Frame", {
                 Size = UDim2.new(1, 0, 0, 32),
                 BackgroundTransparency = 1,
                 Parent = container
             })
-            local btn = create("TextButton", {
-                Size = UDim2.new(1, -20, 1, 0),
-                Position = UDim2.new(0, 10, 0, 0),
+            local btn2 = create("TextButton", {
+                Size = UDim2.new(1, -16, 1, 0),
+                Position = UDim2.new(0, 8, 0, 0),
                 BackgroundColor3 = Color3.fromRGB(60, 60, 60),
                 Text = tostring(labelText),
                 TextColor3 = Color3.new(1, 1, 1),
@@ -256,12 +267,12 @@ local function CreateWindow(data)
                 TextSize = 14,
                 Parent = row
             })
-            create("UICorner", { CornerRadius = UDim.new(0, 4), Parent = btn })
-            btn.MouseButton1Click:Connect(callback)
+            create("UICorner", { CornerRadius = UDim.new(0, 4), Parent = btn2 })
+            btn2.Activated:Connect(callback)
         end
 
         -- 标签切换
-        btn.MouseButton1Click:Connect(function()
+        btn.Activated:Connect(function()
             if currentTab then
                 currentTab.Button.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
                 currentTab.Container.Visible = false
@@ -272,7 +283,7 @@ local function CreateWindow(data)
         end)
 
         table.insert(tabButtons, btn)
-        -- 首个标签自动激活
+        -- 激活第一个标签
         if #tabButtons == 1 then
             btn.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
             container.Visible = true
@@ -284,7 +295,7 @@ local function CreateWindow(data)
     window.CreateTab = createTab
     window.Destroy = function() scr:Destroy() end
 
-    -- 最小化 / 恢复动画
+    -- 最小化 / 还原动画
     local minimized = false
     local savedPosition = main.Position
     local savedSize = main.Size
@@ -301,7 +312,6 @@ local function CreateWindow(data)
     })
     create("UICorner", { CornerRadius = UDim.new(1, 0), Parent = miniBar })
 
-    -- 拖拽手柄（左侧）
     local dragHandle = create("Frame", {
         Size = UDim2.new(0, 50, 1, 0),
         BackgroundColor3 = Color3.fromRGB(50, 50, 50),
@@ -321,7 +331,7 @@ local function CreateWindow(data)
         Parent = dragHandle
     })
 
-    -- 右侧点击还原区域（透明按钮，防止一触即发）
+    -- 还原按钮（点击而非触摸滑动）
     local restoreBtn = create("TextButton", {
         Size = UDim2.new(1, -50, 1, 0),
         Position = UDim2.new(0, 50, 0, 0),
@@ -329,7 +339,6 @@ local function CreateWindow(data)
         Text = "",
         Parent = miniBar
     })
-    -- 标题显示在按钮上方
     create("TextLabel", {
         Size = UDim2.new(1, -4, 1, 0),
         Position = UDim2.new(0, 2, 0, 0),
@@ -372,7 +381,8 @@ local function CreateWindow(data)
         contentContainer.Visible = true
     end
 
-    minBtn.MouseButton1Click:Connect(function()
+    -- 使用 Activated 事件，避免触摸滑动误触
+    minBtn.Activated:Connect(function()
         minimized = not minimized
         if minimized then
             savedPosition = main.Position
@@ -383,14 +393,14 @@ local function CreateWindow(data)
         end
     end)
 
-    restoreBtn.MouseButton1Click:Connect(function()
+    restoreBtn.Activated:Connect(function()
         if minimized then
             minimized = false
             animateRestore()
         end
     end)
 
-    -- 窗口拖动逻辑
+    -- 拖动逻辑（保持使用 Input 事件，拖拽需要连续输入）
     local dragging = false
     local dragOffset = Vector2.new()
     local dragTarget = nil
@@ -398,7 +408,6 @@ local function CreateWindow(data)
     local function onInputBegan(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
             local pos = Vector2.new(input.Position.X, input.Position.Y)
-            -- 主窗口拖动：标题栏
             if main.Visible then
                 local tbPos = titleBar.AbsolutePosition
                 local tbSize = titleBar.AbsoluteSize
@@ -409,7 +418,6 @@ local function CreateWindow(data)
                     return
                 end
             end
-            -- 迷你条拖动：仅拖拽手柄
             if miniBar.Visible then
                 local dhPos = dragHandle.AbsolutePosition
                 local dhSize = dragHandle.AbsoluteSize
@@ -499,7 +507,7 @@ local function Notify(data)
         Parent = frame
     })
     create("UICorner", { CornerRadius = UDim.new(0, 4), Parent = closeBtn })
-    closeBtn.MouseButton1Click:Connect(function() frame:Destroy() end)
+    closeBtn.Activated:Connect(function() frame:Destroy() end)
 
     create("TextLabel", {
         Size = UDim2.new(1, -20, 0, 30),
@@ -534,9 +542,8 @@ end
 
 WindUI.CreateWindow = CreateWindow
 WindUI.Notify = Notify
-
 --[[
-    全局变量声明、辅助函数、全图高亮、无碰撞、ESP 基础框架
+    全局服务、全图高亮、无碰撞、NPC检测、ESP标签管理
 ]]
 local Workspace = game:GetService("Workspace")
 local Lighting = game:GetService("Lighting")
@@ -598,7 +605,7 @@ local function toggleNoclip(enable)
     end
 end
 
--- NPC 检测（基于 NPCs 文件夹）
+-- NPC检测（基于 NPCs 文件夹）
 local NPCsFolder = Workspace:FindFirstChild("NPCs")
 local function isNPCModel(model)
     if not model or not model:IsA("Model") then return false end
@@ -612,12 +619,11 @@ local function isNPCModel(model)
     return false
 end
 
--- ESP 标签存储
+-- ESP标签存储与清理
 local playerTags = {}
 local npcTags = {}
 local tagCreationTime = {}
 
--- 模型被移除时自动清理对应标签
 Workspace.DescendantRemoving:Connect(function(desc)
     if playerTags[desc] then
         local tag = playerTags[desc]
@@ -633,7 +639,6 @@ Workspace.DescendantRemoving:Connect(function(desc)
     end
 end)
 
--- 移除指定标签
 local function removeTag(target)
     local tag = playerTags[target]
     if tag then
@@ -650,7 +655,6 @@ local function removeTag(target)
     end
 end
 
--- 创建 ESP 标签（Highlight + Billboard）
 local function createTag(target, isPlayer)
     local tagDict = isPlayer and playerTags or npcTags
     if tagDict[target] then return end
@@ -677,7 +681,7 @@ local function createTag(target, isPlayer)
     billboard.Size = UDim2.new(0, 300, 0, 30)
     billboard.StudsOffset = Vector3.new(0, 5, 0)
     billboard.AlwaysOnTop = true
-    billboard.Adornee = rootPart   -- 附着到根部件，位置准确
+    billboard.Adornee = rootPart
     billboard.Parent = tag
 
     local label = Instance.new("TextLabel")
@@ -699,7 +703,6 @@ local function createTag(target, isPlayer)
     tagCreationTime[target] = tick()
 end
 
--- 更新标签文字
 local function updateTag(target)
     local tag = playerTags[target] or npcTags[target]
     if not tag then return end
@@ -734,15 +737,12 @@ local function updateTag(target)
     local hpText = (type(hp) == "number") and ("HP: " .. hp) or "HP: ??"
     label.Text = name .. " | " .. string.format("%.1f", distance) .. " m | " .. hpText
 end
-
 --[[
-    玩家 ESP 与 NPC ESP 的启用/禁用逻辑，使用 DescendantAdded 事件驱动
+    玩家与NPC ESP 启用/禁用，使用 DescendantAdded 避免全图扫描
 ]]
--- 玩家 ESP 事件连接
 local playerESPConnection = nil
 local function enablePlayerESP()
     if playerESPConnection then return end
-    -- 初始扫描现有玩家
     for _, model in pairs(Workspace:GetDescendants()) do
         if model:IsA("Model") and model:FindFirstChildOfClass("Humanoid") then
             local isPlayer = Players:GetPlayerFromCharacter(model)
@@ -758,7 +758,6 @@ local function enablePlayerESP()
             end
         end
     end
-    -- 监听新加入的玩家模型
     playerESPConnection = Workspace.DescendantAdded:Connect(function(desc)
         if desc:IsA("Model") and desc:FindFirstChildOfClass("Humanoid") then
             local isPlayer = Players:GetPlayerFromCharacter(desc)
@@ -789,7 +788,6 @@ local function disablePlayerESP()
     playerTags = {}
 end
 
--- NPC ESP 事件连接
 local npcESPConnection = nil
 local function enableNPCESP()
     if npcESPConnection then return end
@@ -831,20 +829,18 @@ local function disableNPCESP()
     end
     npcTags = {}
 end
-
 --[[
-    心跳循环：定期更新标签文字、移除超距或失效标签
-    本地玩家重生时重新应用无碰撞和 ESP 状态
+    心跳循环：每5帧更新标签文本，移除超距/失效标签
+    本地玩家重生时恢复无碰撞状态
 ]]
 local frameCounter = 0
 RunService.Heartbeat:Connect(function()
     frameCounter = frameCounter + 1
-    if frameCounter % 5 ~= 0 then return end  -- 每 5 帧检查一次
+    if frameCounter % 5 ~= 0 then return end
 
     local now = tick()
     local toRemove = {}
 
-    -- 检查所有玩家标签
     for target, tag in pairs(playerTags) do
         if target and target:IsA("Model") and target:FindFirstChild("ESPTag") then
             local rootPart = target:FindFirstChild("HumanoidRootPart") or target:FindFirstChild("Head")
@@ -862,7 +858,6 @@ RunService.Heartbeat:Connect(function()
             if not valid then
                 table.insert(toRemove, target)
             else
-                -- 额外检查：如果标签文字长时间显示 "Loading..." 则移除
                 local label = tag:FindFirstChild("Billboard") and tag.Billboard:FindFirstChild("Label")
                 if label and label.Text == "Loading..." and tagCreationTime[target] and now - tagCreationTime[target] > 3 then
                     table.insert(toRemove, target)
@@ -873,7 +868,6 @@ RunService.Heartbeat:Connect(function()
         end
     end
 
-    -- 检查所有 NPC 标签
     for target, tag in pairs(npcTags) do
         if target and target:IsA("Model") and target:FindFirstChild("ESPTag") then
             local rootPart = target:FindFirstChild("HumanoidRootPart") or target:FindFirstChild("Head")
@@ -906,17 +900,14 @@ RunService.Heartbeat:Connect(function()
     end
 end)
 
--- 本地玩家重生时恢复无碰撞状态
 LocalPlayer.CharacterAdded:Connect(function(char)
     task.wait(0.5)
     if NoclipEnabled then
         toggleNoclip(true)
     end
-    -- ESP 会自动通过事件处理，无需额外操作
 end)
-
 --[[
-    创建主窗口和标签页，绑定全图高亮、无碰撞、ESP 开关
+    创建主窗口与标签页，绑定所有功能开关
 ]]
 local MainWindow = WindUI.CreateWindow({
     Name = "Explorer Script",
@@ -928,9 +919,7 @@ local MainWindow = WindUI.CreateWindow({
 
 local UpdateTab = MainWindow:CreateTab("🔍更新内容🔍")
 UpdateTab:AddLabel("version：v0.2.0.5")
-UpdateTab:AddLabel("▪ 重置UI，修复ESP崩溃。")
-UpdateTab:AddLabel("▪ 优化最小化还原为点击触发。")
-UpdateTab:AddLabel("▪ 性能提升：事件驱动ESP。")
+UpdateTab:AddLabel("▪ 重置UI。")
 
 local SettingsTab = MainWindow:CreateTab("⚙️常规功能⚙️")
 SettingsTab:AddToggle("全图高亮", FullbrightEnabled, function(value)
