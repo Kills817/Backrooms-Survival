@@ -251,8 +251,8 @@ local function CreateWindow(data)
     local targetMinSize = UDim2.new(0, 337.5, 0, 262.5)
 
     local miniBar = Instance.new("Frame")
-    miniBar.Size = UDim2.new(0, 160, 0, 32)
-    miniBar.Position = UDim2.new(0.5, -80, 0, 10)
+    miniBar.Size = UDim2.new(0, 180, 0, 34)
+    miniBar.Position = UDim2.new(0.5, -90, 0, 8)
     miniBar.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
     miniBar.BorderSizePixel = 0
     miniBar.Visible = false
@@ -262,7 +262,7 @@ local function CreateWindow(data)
     miniCorner.Parent = miniBar
 
     local dragHandle = Instance.new("Frame")
-    dragHandle.Size = UDim2.new(0, 16, 1, 0)
+    dragHandle.Size = UDim2.new(0, 26, 1, 0)
     dragHandle.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
     dragHandle.BorderSizePixel = 0
     dragHandle.Parent = miniBar
@@ -274,7 +274,7 @@ local function CreateWindow(data)
     handleIcon.Size = UDim2.new(1, 0, 1, 0)
     handleIcon.BackgroundTransparency = 1
     handleIcon.Text = "⠿"
-    handleIcon.TextColor3 = Color3.fromRGB(180, 180, 180)
+    handleIcon.TextColor3 = Color3.fromRGB(200, 200, 200)
     handleIcon.Font = Enum.Font.SourceSansBold
     handleIcon.TextSize = 18
     handleIcon.TextXAlignment = Enum.TextXAlignment.Center
@@ -282,8 +282,8 @@ local function CreateWindow(data)
     handleIcon.Parent = dragHandle
 
     local divider = Instance.new("Frame")
-    divider.Size = UDim2.new(0, 2, 1, -8)
-    divider.Position = UDim2.new(0, 16, 0.5, -4)
+    divider.Size = UDim2.new(0, 2, 1, -4)
+    divider.Position = UDim2.new(0, 26, 0, 2)
     divider.BackgroundColor3 = Color3.fromRGB(100, 100, 100)
     divider.BorderSizePixel = 0
     divider.Parent = miniBar
@@ -292,8 +292,8 @@ local function CreateWindow(data)
     divCorner.Parent = divider
 
     local miniTitle = Instance.new("TextLabel")
-    miniTitle.Size = UDim2.new(1, -20, 1, 0)
-    miniTitle.Position = UDim2.new(0, 22, 0, 0)
+    miniTitle.Size = UDim2.new(1, -30, 1, 0)
+    miniTitle.Position = UDim2.new(0, 32, 0, 0)
     miniTitle.BackgroundTransparency = 1
     miniTitle.Text = tostring(data.Name or "WindUI")
     miniTitle.TextColor3 = Color3.new(1, 1, 1)
@@ -854,10 +854,12 @@ local MainWindow = WindUI.CreateWindow({
     Keybind = Enum.KeyCode.RightShift,
     Folder = "ExplorerScript"
 })
-local UpdateTab = MainWindow:CreateTab("更新公告")
+
+local UpdateTab = MainWindow:CreateTab("🔍更新内容🔍")
 UpdateTab:AddLabel("version：v0.2.0.5")
 UpdateTab:AddLabel("▪重置UI。")
-local SettingsTab = MainWindow:CreateTab("基础功能")
+
+local SettingsTab = MainWindow:CreateTab("⚙️常规功能⚙️")
 SettingsTab:AddToggle("全图高亮", FullbrightEnabled, function(value)
     FullbrightEnabled = value
     applyFullbright(value)
@@ -865,7 +867,8 @@ end)
 SettingsTab:AddToggle("无碰撞", NoclipEnabled, function(value)
     toggleNoclip(value)
 end)
-local ESPTab = MainWindow:CreateTab("透视")
+
+local ESPTab = MainWindow:CreateTab("👁️透视👁️")
 ESPTab:AddToggle("玩家ESP", PlayerESPEnabled, function(value)
     PlayerESPEnabled = value
     if value then
