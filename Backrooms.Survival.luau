@@ -248,10 +248,11 @@ local function CreateWindow(data)
     local minimized = false
     local savedPosition = main.Position
     local savedSize = main.Size
+    local targetMinSize = UDim2.new(0, 337.5, 0, 262.5) -- 75%
 
     local miniBar = Instance.new("Frame")
-    miniBar.Size = UDim2.new(0, 150, 0, 30)
-    miniBar.Position = UDim2.new(0.5, -75, 0, 10)
+    miniBar.Size = UDim2.new(0, 160, 0, 32)
+    miniBar.Position = UDim2.new(0.5, -80, 0, 10)
     miniBar.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
     miniBar.BorderSizePixel = 0
     miniBar.Visible = false
@@ -261,9 +262,9 @@ local function CreateWindow(data)
     miniCorner.Parent = miniBar
 
     local handle = Instance.new("Frame")
-    handle.Size = UDim2.new(0, 4, 1, -8)
-    handle.Position = UDim2.new(0, 8, 0.5, -4)
-    handle.BackgroundColor3 = Color3.fromRGB(150, 150, 150)
+    handle.Size = UDim2.new(0, 8, 1, -8)
+    handle.Position = UDim2.new(0, 4, 0.5, -4)
+    handle.BackgroundColor3 = Color3.fromRGB(180, 180, 180)
     handle.BorderSizePixel = 0
     handle.Parent = miniBar
     local handleCorner = Instance.new("UICorner")
@@ -281,46 +282,66 @@ local function CreateWindow(data)
     miniTitle.TextXAlignment = Enum.TextXAlignment.Left
     miniTitle.Parent = miniBar
 
-    miniBar.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-            minimized = false
-            local tweenInfo = TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
-            miniBar.Visible = false
-            main.Visible = true
-            main.Size = UDim2.new(0, 450, 0, 350)
-            main.Position = savedPosition
-            TweenService:Create(main, tweenInfo, {Size = savedSize, Position = savedPosition, BackgroundTransparency = 0}):Play()
-            minBtn.Text = "—"
-            contentContainer.Visible = true
-        end
-    end)
+    local function animateMinimize()
+        local tweenInfo = TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+        TweenService:Create(main, tweenInfo, {
+            Size = targetMinSize,
+            Position = UDim2.new(0.5, -targetMinSize.X.Offset/2, 0.5, -targetMinSize.Y.Offset/2),
+            BackgroundTransparency = 1
+        }):Play()
+        task.wait(0.4)
+        main.Visible = false
+        miniBar.Visible = true
+        minBtn.Text = "+"
+        contentContainer.Visible = false
+    end
+
+    local function animateRestore()
+        miniBar.Visible = false
+        main.Visible = true
+        main.Size = targetMinSize
+        main.Position = UDim2.new(0.5, -targetMinSize.X.Offset/2, 0.5, -targetMinSize.Y.Offset/2)
+        main.BackgroundTransparency = 1
+        local tweenInfo = TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+        TweenService:Create(main, tweenInfo, {
+            Size = savedSize,
+            Position = savedPosition,
+            BackgroundTransparency = 0
+        }):Play()
+        minBtn.Text = "—"
+        contentContainer.Visible = true
+    end
 
     minBtn.MouseButton1Click:Connect(function()
         minimized = not minimized
         if minimized then
             savedPosition = main.Position
             savedSize = main.Size
-            local tweenInfo = TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
-            TweenService:Create(main, tweenInfo, {Size = UDim2.new(0, 0, 0, 0), Position = UDim2.new(0.5, 0, 0.5, 0), BackgroundTransparency = 1}):Play()
-            task.wait(0.3)
-            main.Visible = false
-            miniBar.Visible = true
-            miniBar.Position = UDim2.new(0.5, -75, 0, 10)
-            minBtn.Text = "+"
-            contentContainer.Visible = false
+            animateMinimize()
         else
-            miniBar.Visible = false
-            main.Visible = true
-            main.Size = UDim2.new(0, 0, 0, 0)
-            main.Position = UDim2.new(0.5, 0, 0.5, 0)
-            main.BackgroundTransparency = 1
-            local tweenInfo = TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
-            TweenService:Create(main, tweenInfo, {Size = savedSize, Position = savedPosition, BackgroundTransparency = 0}):Play()
-            minBtn.Text = "—"
-            contentContainer.Visible = true
+            animateRestore()
         end
     end)
 
+    -- 点击小条（非把手区域）还原
+    local function onMiniBarClick(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            local pos = Vector2.new(input.Position.X, input.Position.Y)
+            local mbPos = miniBar.AbsolutePosition
+            local mbSize = miniBar.AbsoluteSize
+            if pos.X >= mbPos.X and pos.X <= mbPos.X + mbSize.X and pos.Y >= mbPos.Y and pos.Y <= mbPos.Y + mbSize.Y then
+                local handlePos = handle.AbsolutePosition
+                local handleSize = handle.AbsoluteSize
+                if not (pos.X >= handlePos.X and pos.X <= handlePos.X + handleSize.X and pos.Y >= handlePos.Y and pos.Y <= handlePos.Y + handleSize.Y) then
+                    minimized = false
+                    animateRestore()
+                end
+            end
+        end
+    end
+    miniBar.InputBegan:Connect(onMiniBarClick)
+
+    -- 拖动处理
     local dragging = false
     local dragOffset = Vector2.new()
     local dragTarget = nil
@@ -342,10 +363,14 @@ local function CreateWindow(data)
                 local mbPos = miniBar.AbsolutePosition
                 local mbSize = miniBar.AbsoluteSize
                 if pos.X >= mbPos.X and pos.X <= mbPos.X + mbSize.X and pos.Y >= mbPos.Y and pos.Y <= mbPos.Y + mbSize.Y then
-                    dragging = true
-                    dragOffset = pos - Vector2.new(miniBar.AbsolutePosition.X, miniBar.AbsolutePosition.Y)
-                    dragTarget = miniBar
-                    return
+                    local handlePos = handle.AbsolutePosition
+                    local handleSize = handle.AbsoluteSize
+                    if pos.X >= handlePos.X and pos.X <= handlePos.X + handleSize.X and pos.Y >= handlePos.Y and pos.Y <= handlePos.Y + handleSize.Y then
+                        dragging = true
+                        dragOffset = pos - Vector2.new(miniBar.AbsolutePosition.X, miniBar.AbsolutePosition.Y)
+                        dragTarget = miniBar
+                        return
+                    end
                 end
             end
         end
@@ -373,9 +398,6 @@ local function CreateWindow(data)
 end
 
 local notificationContainer = nil
-local notificationQueue = {}
-local maxNotifications = 8
-
 local function createNotificationContainer()
     if notificationContainer then return end
     notificationContainer = Instance.new("Frame")
@@ -406,6 +428,9 @@ local function Notify(data)
     local corner = Instance.new("UICorner")
     corner.CornerRadius = UDim.new(0, 6)
     corner.Parent = frame
+
+    -- 初始位置（右侧外）
+    frame.Position = UDim2.new(1, 10, 0, 0)
 
     local title = Instance.new("TextLabel")
     title.Size = UDim2.new(1, -40, 0, 24)
@@ -448,11 +473,18 @@ local function Notify(data)
     desc.TextWrapped = true
     desc.Parent = frame
 
+    -- 滑入动画
+    local tweenInfo = TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+    TweenService:Create(frame, tweenInfo, {Position = UDim2.new(0, 0, 0, 0)}):Play()
+
     local duration = data.Duration or 4
     if duration > 0 then
         task.spawn(function()
             task.wait(duration)
             if frame and frame.Parent then
+                local fadeOut = TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+                TweenService:Create(frame, fadeOut, {BackgroundTransparency = 1}):Play()
+                task.wait(0.3)
                 frame:Destroy()
             end
         end)
